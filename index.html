@@ -34,6 +34,22 @@
     border: 1px solid rgba(255,255,255,0.2);
 }
 
+/* Ensure widget works when injected */
+#virtual-tryon-widget-container {
+    position: relative;
+    z-index: 999999;
+}
+
+#virtual-tryon-widget-container * {
+    box-sizing: border-box;
+}
+
+/* Ensure minimized widget is clickable */
+.virtual-tryon-widget.widget-minimized {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+}
+        
 .custom-notification.show {
     transform: translateY(0) scale(1);
     opacity: 1;
