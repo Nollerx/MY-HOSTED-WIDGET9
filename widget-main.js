@@ -359,8 +359,8 @@ let userPhotoFileId = null;
 let sessionId = generateSessionId();
 let filteredClothing = [...sampleClothing];
 let userEmail = null;
-let tryonChatHistory = undefined;
-let generalChatHistory = undefined;
+let tryonChatHistory = [];
+let generalChatHistory = [];
 let currentTryOnId = null;
 let currentFeaturedItem = null;
 
@@ -1908,41 +1908,6 @@ function preventZoom() {
         }, false);
     }
 }
-
-document.addEventListener('DOMContentLoaded', function() {
-detectDevice();
-
-tryonChatHistory = undefined;
-generalChatHistory = undefined;
-
-// Load clothing data from Supabase
-loadClothingData();
-// Apply theme
-applyWidgetTheme();
-    
-    document.getElementById('virtualTryonWidget').addEventListener('click', function(e) {
-        // Only open widget if it's minimized AND the click is not on the close button
-        if (this.classList.contains('widget-minimized') && !e.target.closest('.widget-toggle') && !e.target.closest('.btn')) {
-            openWidget();
-        }
-    });
-    
-    window.addEventListener('orientationchange', handleOrientationChange);
-    window.addEventListener('resize', handleOrientationChange);
-    
-    preventZoom();
-    
-    if (isMobile) {
-        document.addEventListener('touchstart', function() {}, { passive: true });
-        
-        const cameraControls = document.getElementById('cameraControls');
-        if (cameraControls) {
-            cameraControls.addEventListener('touchstart', function(e) {
-                e.stopPropagation();
-            }, { passive: true });
-        }
-    }
-});
 
 /**
  * Enhanced keyboard navigation
