@@ -1,4 +1,55 @@
 console.log("Virtual Try-On Widget script is running");
+
+// Make initializeWidget globally accessible
+window.initializeWidget = function() {
+    console.log("initializeWidget called");
+    detectDevice();
+    tryonChatHistory = [];  // Initialize as array instead of undefined
+    generalChatHistory = []; // Initialize as array instead of undefined
+    
+    // Load clothing data from Shopify
+    loadClothingData().then(() => {
+        console.log('Initial clothing data load complete');
+    }).catch(error => {
+        console.error('Initial clothing data load failed:', error);
+    });
+    
+    // Apply theme
+    applyWidgetTheme();
+    
+    const widget = document.getElementById('virtualTryonWidget');
+    if (widget) {
+        widget.addEventListener('click', function(e) {
+            if (this.classList.contains('widget-minimized') && !e.target.closest('.widget-toggle') && !e.target.closest('.btn')) {
+                openWidget();
+            }
+        });
+    } else {
+        console.warn('virtualTryonWidget not found in DOM at initialization');
+    }
+    
+    window.addEventListener('orientationchange', handleOrientationChange);
+    window.addEventListener('resize', handleOrientationChange);
+    preventZoom();
+    
+    if (isMobile) {
+        document.addEventListener('touchstart', function() {}, { passive: true });
+        const cameraControls = document.getElementById('cameraControls');
+        if (cameraControls) {
+            cameraControls.addEventListener('touchstart', function(e) {
+                e.stopPropagation();
+            }, { passive: true });
+        }
+    }
+}
+
+// Keep the existing DOMContentLoaded for direct page loads
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', window.initializeWidget);
+} else {
+    // Don't auto-initialize here since the loader will call it
+    console.log('Document already loaded, waiting for manual initialization');
+}
 // Configuration
 const WEBHOOK_URL = 'https://ancesoftware.app.n8n.cloud/webhook-test/virtual-tryon-production';
         
