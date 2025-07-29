@@ -88,89 +88,137 @@ let sampleClothing = [];
 // Load clothing data from active_clothing_items view
 // Load clothing data from active_clothing_items table
 async function loadClothingData() {
-try {
-// Get store name from window variable or default to your test store
-const storeName = window.ELLO_STORE_NAME || 'm8ir6h-8k'; // Your Shopify store name
+    try {
+        const storeName = window.ELLO_STORE_NAME || 'm8ir6h-8k';
+        console.log('Loading products from Shopify store:', storeName);
 
-console.log('Loading products from Shopify store:', storeName);
-
-// Fetch all products from Shopify as JSON with retry logic
-const response = await fetchWithRetry(`https://${storeName}.myshopify.com/products.json?limit=250`, {
-    method: 'GET',
-    headers: {
-        'Content-Type': 'application/json'
-    }
-});
-
-if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-}
-
-const data = await response.json();
-
-if (!data.products || !Array.isArray(data.products)) {
-    throw new Error('Invalid data format received from Shopify');
-}
-
-console.log('Shopify products loaded:', data.products.length);
-
-// Convert Shopify products to your widget format with validation
-sampleClothing = data.products
-    .filter(product => product && product.handle && product.title) // Validate required fields
-    .map(product => {
-        const firstVariant = product.variants?.[0] || {};
-        const firstImage = product.images?.[0] || {};
+        // First, let's check if we can access the Shopify store
+        const testUrl = `https://${storeName}.myshopify.com/products.json?limit=1`;
         
-        return {
-            id: product.handle, // Use Shopify handle as ID
-            name: product.title,
-            price: parseFloat(firstVariant.price || 0),
-            category: product.product_type?.toLowerCase() || 'clothing',
-            color: getColorFromProduct(product),
-            image_url: firstImage.src || '',
-            product_url: `https://${storeName}.myshopify.com/products/${product.handle}`,
-            shopify_product_id: product.id,
-            // Store all variants for size selection later
-            variants: (product.variants || []).map(variant => ({
-                id: variant.id,
-                title: variant.title,
-                price: parseFloat(variant.price || 0),
-                available: variant.available || false,
-                size: variant.option1, // Usually size
-                color: variant.option2, // Usually color  
-                option3: variant.option3
-            }))
-        };
-    });
+        try {
+            const testResponse = await fetch(testUrl, {
+                method: 'GET',
+                mode: 'cors', // Explicitly set CORS mode
+                headers: {
+                    'Accept': 'application/json',
+                }
+            });
+            
+            if (!testResponse.ok) {
+                throw new Error(`Shopify store not accessible: ${testResponse.status}`);
+            }
+        } catch (corsError) {
+            console.warn('CORS issue detected, trying alternative method...');
+            
+            // Alternative: Try JSONP approach or use a proxy
+            // For now, we'll use demo data
+            throw new Error('CORS restriction on Shopify store');
+        }
 
-console.log(`✅ Loaded ${sampleClothing.length} products from Shopify`);
+        // If test passed, load all products
+        const response = await fetchWithRetry(`https://${storeName}.myshopify.com/products.json?limit=250`, {
+            method: 'GET',
+            mode: 'cors',
+            headers: {
+                'Accept': 'application/json',
+            }
+        });
 
-// Refresh UI if widget is open
-if (widgetOpen && currentMode === 'tryon') {
-    await populateFeaturedAndQuickPicks();
-}
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-} catch (error) {
-console.error('❌ Error loading from Shopify:', error);
+        const data = await response.json();
+        
+        if (!data.products || !Array.isArray(data.products)) {
+            throw new Error('Invalid data format received from Shopify');
+        }
 
-// Show user-friendly error message
-showSuccessNotification('Connection Error', 'Unable to load products. Using demo data.', 5000);
+        console.log('✅ Shopify products loaded:', data.products.length);
 
-// Fallback: Create some demo data so widget still works
-sampleClothing = [
-    {
-        id: 'demo-item-1',
-        name: 'Demo Product (Shopify Connection Failed)',
-        price: 29.99,
-        category: 'shirt',
-        color: 'blue',
-        image_url: 'https://via.placeholder.com/300x400?text=Demo+Product',
-        product_url: '#',
-        variants: [{ id: 'demo-variant', title: 'One Size', price: 29.99, available: true }]
+        // Convert Shopify products to widget format
+        sampleClothing = data.products
+            .filter(product => product && product.handle && product.title)
+            .map(product => {
+                const firstVariant = product.variants?.[0] || {};
+                const firstImage = product.images?.[0] || {};
+                
+                return {
+                    id: product.handle,
+                    name: product.title,
+                    price: parseFloat(firstVariant.price || 0),
+                    category: product.product_type?.toLowerCase() || 'clothing',
+                    color: getColorFromProduct(product),
+                    image_url: firstImage.src || '',
+                    product_url: `https://${storeName}.myshopify.com/products/${product.handle}`,
+                    shopify_product_id: product.id,
+                    variants: (product.variants || []).map(variant => ({
+                        id: variant.id,
+                        title: variant.title,
+                        price: parseFloat(variant.price || 0),
+                        available: variant.available || false,
+                        size: variant.option1,
+                        color: variant.option2,
+                        option3: variant.option3
+                    }))
+                };
+            });
+
+        console.log(`✅ Loaded ${sampleClothing.length} products from Shopify`);
+
+        // Refresh UI if widget is open
+        if (widgetOpen && currentMode === 'tryon') {
+            await populateFeaturedAndQuickPicks();
+        }
+
+    } catch (error) {
+        console.error('❌ Error loading from Shopify:', error);
+        
+        // Show user-friendly error message
+        if (typeof showSuccessNotification === 'function') {
+            showSuccessNotification('Connection Error', 'Unable to load products. Using demo data.', 5000);
+        }
+
+        // Use comprehensive demo data
+        sampleClothing = [
+            {
+                id: 'demo-shirt-1',
+                name: 'Classic White Shirt',
+                price: 49.99,
+                category: 'shirt',
+                color: 'white',
+                image_url: 'https://via.placeholder.com/300x400/ffffff/333333?text=White+Shirt',
+                product_url: '#',
+                variants: [{ id: '1', title: 'Small', price: 49.99, available: true, size: 'S' },
+                          { id: '2', title: 'Medium', price: 49.99, available: true, size: 'M' },
+                          { id: '3', title: 'Large', price: 49.99, available: true, size: 'L' }]
+            },
+            {
+                id: 'demo-dress-1',
+                name: 'Summer Floral Dress',
+                price: 79.99,
+                category: 'dress',
+                color: 'multicolor',
+                image_url: 'https://via.placeholder.com/300x400/ffcccc/333333?text=Floral+Dress',
+                product_url: '#',
+                variants: [{ id: '4', title: 'Small', price: 79.99, available: true, size: 'S' },
+                          { id: '5', title: 'Medium', price: 79.99, available: true, size: 'M' }]
+            },
+            {
+                id: 'demo-jacket-1',
+                name: 'Denim Jacket',
+                price: 89.99,
+                category: 'jacket',
+                color: 'blue',
+                image_url: 'https://via.placeholder.com/300x400/4169e1/ffffff?text=Denim+Jacket',
+                product_url: '#',
+                variants: [{ id: '6', title: 'Medium', price: 89.99, available: true, size: 'M' },
+                          { id: '7', title: 'Large', price: 89.99, available: true, size: 'L' }]
+            }
+        ];
+        
+        console.log('Using demo data with', sampleClothing.length, 'items');
     }
-];
-console.log('Using demo data due to Shopify connection error');
-}
 }
 
 // Utility function for retry logic
