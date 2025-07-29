@@ -1,5 +1,5 @@
 (function () {
-    const widgetURL = "https://nollerx.github.io/MY-HOSTED-WIDGET9/";
+    const widgetURL = "https://nollerx.github.io/MY-HOSTED-WIDGET9/index.html";
     
     // Get store configuration from script tag
     const currentScript = document.currentScript;
