@@ -41,15 +41,30 @@
         .then(html => {
             console.log('HTML fetched successfully');
             
-            // Remove the script tag from HTML since we'll load it separately
+            // Parse the HTML
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
             
-            // Remove script tags
+            // Extract styles from head
+            const styles = doc.querySelectorAll('style');
+            let styleContent = '';
+            styles.forEach(style => {
+                styleContent += style.innerHTML + '\n';
+            });
+            
+            // Create and inject style element
+            if (styleContent) {
+                const styleElement = document.createElement('style');
+                styleElement.innerHTML = styleContent;
+                document.head.appendChild(styleElement);
+                console.log('Styles injected');
+            }
+            
+            // Remove script tags from body
             const scripts = doc.querySelectorAll('script');
             scripts.forEach(script => script.remove());
             
-            // Get the cleaned HTML
+            // Get the body content
             const bodyContent = doc.body.innerHTML;
             
             // Inject the HTML
@@ -63,7 +78,7 @@
         .then(() => {
             console.log('Script loaded, initializing widget...');
             
-            // Manually trigger initialization since DOMContentLoaded has passed
+            // Manually trigger initialization
             if (typeof window.initializeWidget === 'function') {
                 window.initializeWidget();
             }
