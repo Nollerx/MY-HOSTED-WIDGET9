@@ -286,16 +286,7 @@ body {
     border-bottom: 1px solid #e0e0e0;
 }
 
-.widget-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20"><path d="M0,10 Q25,0 50,10 T100,10 V20 H0 Z" fill="rgba(0,0,0,0.05)"/></svg>') no-repeat bottom;
-    background-size: 100% 20px;
-}
+
 
 .widget-title {
     font-size: 18px;
@@ -2221,6 +2212,8 @@ body {
     min-height: 100%;
 }
 
+
+
 /* Mobile-specific browser image adjustments - prevent cut-off */
 @media (max-width: 768px) {
     .browser-clothing-card img {
@@ -2249,25 +2242,42 @@ body {
     }
 }
 
-/* Desktop fix for browser images */
+/* Desktop fix for browser images - ONLY for clothing browser modal */
 @media (min-width: 769px) {
-    .browser-clothing-card img {
+    .clothing-browser-modal .browser-clothing-card {
+        min-height: auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        padding: 12px;
+    }
+    
+    .clothing-browser-modal .browser-clothing-card img {
+        position: relative;
+        top: auto;
+        left: auto;
+        z-index: auto;
         height: auto;
-        min-height: 100px;
-        max-height: 150px;
+        min-height: 120px;
+        max-height: 180px;
         object-fit: contain;
         object-position: center;
         background-color: #f0f0f0;
         border-radius: 4px;
         margin-bottom: 8px;
-        width: 100%;
     }
     
-    .browser-clothing-card {
-        min-height: auto;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
+    .clothing-browser-modal .browser-card-name {
+        position: relative;
+        bottom: auto;
+        left: auto;
+        right: auto;
+        z-index: auto;
+        color: #333;
+        text-shadow: none;
+        margin-top: 8px;
+        font-size: 11px;
+        text-align: center;
     }
 }
 
@@ -2288,6 +2298,8 @@ body {
     letter-spacing: 0.5px;
     text-shadow: 0 2px 4px rgba(0,0,0,0.8);
 }
+
+
 
 .browser-card-price {
     display: none;
