@@ -1399,7 +1399,7 @@ if (result.success && result.result_image_url) {
                     <div class="loading-spinner"></div>
                     <span class="btn-text">
                         <span class="cart-icon">🛒</span>
-                        Buy Now - $${clothing.price.toFixed(2)}
+                        Add to Cart - $${clothing.price.toFixed(2)}
                     </span>
                 </button>
             </div>
@@ -1421,7 +1421,7 @@ if (result.success && result.result_image_url) {
                     <div class="loading-spinner"></div>
                     <span class="btn-text">
                         <span class="cart-icon">🛒</span>
-                        Buy Now - $${clothing.price.toFixed(2)}
+                        Add to Cart - $${clothing.price.toFixed(2)}
                     </span>
                 </button>
             </div>
@@ -1446,7 +1446,7 @@ resultSection.innerHTML = `
                 <div class="loading-spinner"></div>
                 <span class="btn-text">
                     <span class="cart-icon">🛒</span>
-                    Buy Now - $${clothing.price.toFixed(2)}
+                    Add to Cart - $${clothing.price.toFixed(2)}
                 </span>
             </button>
         </div>
@@ -2276,6 +2276,10 @@ function renderWardrobeGrid() {
                             <span>👕</span>
                             <span>Add to Outfit</span>
                         </button>
+                        <button class="wardrobe-action-btn wardrobe-add-cart-btn" onclick="addWardrobeItemToCart('${item.id}')" title="Add this item to your cart">
+                            <span>🛒</span>
+                            <span>Add to Cart</span>
+                        </button>
                     ` : `
                         <button class="wardrobe-action-btn wardrobe-use-photo-btn" onclick="useOriginalPhoto('${item.id}')" title="Use this photo for try-on">
                             <span>📸</span>
@@ -2445,5 +2449,140 @@ function autoSaveToWardrobe(clothing, resultImageUrl, tryOnId) {
         addToWardrobe(clothing, resultImageUrl, tryOnId);
         addOriginalPhotoToWardrobe(); // Also save original photo if not already saved
         showSuccessNotification('Saved to Wardrobe', `${clothing.name} has been saved to your wardrobe!`);
+    }
+}
+
+// Add wardrobe item to cart
+async function addWardrobeItemToCart(tryOnId) {
+    const wardrobe = getWardrobe();
+    const item = wardrobe.find(w => w.id === tryOnId);
+    
+    if (!item) {
+        console.error('Wardrobe item not found:', tryOnId);
+        return;
+    }
+    
+    // Find the original clothing data
+    const clothing = sampleClothing.find(c => c.id === item.clothingId);
+    
+    if (!clothing) {
+        console.error('Original clothing data not found for wardrobe item:', item.clothingId);
+        alert('Item not found. Please try again.');
+        return;
+    }
+    
+    if (!clothing.variants || clothing.variants.length === 0) {
+        alert('Product variants not found');
+        return;
+    }
+    
+    try {
+        let variantToAdd = null;
+        
+        // Size selection logic
+        if (clothing.variants.length === 1) {
+            variantToAdd = clothing.variants[0];
+        } else {
+            const selectedVariantId = await showSizeSelector(clothing);
+            if (!selectedVariantId) return;
+            
+            variantToAdd = clothing.variants.find(v => v.id == selectedVariantId);
+            if (!variantToAdd) {
+                alert('Selected size not found. Please try again.');
+                return;
+            }
+        }
+        
+        // Add to Shopify cart
+        const cartResponse = await fetch('/cart/add.js', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                id: variantToAdd.id,
+                quantity: 1
+            })
+        });
+        
+        if (cartResponse.ok) {
+            const cartResult = await cartResponse.json();
+            console.log('✅ Successfully added wardrobe item to cart:', cartResult);
+            
+            // Show success notification
+            const sizeText = variantToAdd.size || variantToAdd.title || '';
+            const sizeDisplay = sizeText ? `Size ${sizeText}` : '';
+            showSuccessNotification(
+                'Added to Cart!',
+                `${item.clothingName} ${sizeDisplay ? `• ${sizeDisplay}` : ''}`
+            );
+            
+            // Update cart display
+            await updateCartDisplay();
+            
+            // Send webhook for analytics tracking
+            try {
+                const conversionData = {
+                    mode: 'conversion',
+                    tryOnId: tryOnId,
+                    sessionId: sessionId,
+                    storeId: window.ELLO_STORE_ID || 'default_store',
+                    conversionType: 'wardrobe_add_to_cart',
+                    revenueAmount: variantToAdd.price,
+                    selectedClothing: {
+                        id: clothing.id,
+                        name: clothing.name,
+                        price: variantToAdd.price.toFixed(2),
+                        category: clothing.category,
+                        color: clothing.color,
+                        image_url: clothing.image_url,
+                        variant_id: variantToAdd.id,
+                        size: variantToAdd.size || variantToAdd.title
+                    },
+                    tryonResultUrl: item.resultImageUrl,
+                    shopifyCartResult: cartResult,
+                    deviceInfo: {
+                        isMobile: isMobile,
+                        isTablet: isTablet,
+                        isIOS: isIOS,
+                        isAndroid: isAndroid,
+                        viewport: {
+                            width: window.innerWidth,
+                            height: window.innerHeight
+                        }
+                    },
+                    timestamp: new Date().toISOString()
+                };
+                
+                // Send analytics webhook (don't block on this)
+                fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(conversionData)
+                }).then(response => {
+                    if (response.ok) {
+                        console.log('✅ Wardrobe analytics tracked successfully');
+                    } else {
+                        console.log('⚠️ Wardrobe analytics tracking failed, but cart add succeeded');
+                    }
+                }).catch(error => {
+                    console.log('⚠️ Wardrobe analytics tracking error:', error);
+                });
+                
+            } catch (webhookError) {
+                console.log('⚠️ Wardrobe webhook tracking failed:', webhookError);
+            }
+            
+        } else {
+            const errorText = await cartResponse.text();
+            console.error('❌ Shopify cart error:', errorText);
+            alert(`❌ Failed to add to cart. Error: ${cartResponse.status}`);
+        }
+        
+    } catch (error) {
+        console.error('❌ Network error:', error);
+        alert('❌ Network error: ' + error.message);
     }
 }
