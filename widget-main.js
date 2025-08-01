@@ -94,14 +94,14 @@ const CLOTHING_CATEGORIES = {
     ],
     // Explicitly excluded categories
     excluded: [
-        'shoes', 'footwear', 'boots', 'sandals', 'sneakers', 'heels',
-        'accessories', 'jewelry', 'jewellery', 'bags', 'purse', 'wallet',
-        'hat', 'hats', 'cap', 'caps', 'sunglasses', 'glasses', 'watch',
-        'belt', 'belts', 'scarf', 'scarves', 'gloves', 'socks',
-        'underwear', 'lingerie', 'bra', 'panties', 'boxers',
-        'briefs''case', 'cover', 'frame', 'display', 'poster', 'print',
-        'keychain', 'sticker', 'mug', 'bottle', 'gift card'
-    ]
+    'shoes', 'footwear', 'boots', 'sandals', 'sneakers', 'heels',
+    'accessories', 'jewelry', 'jewellery', 'bags', 'purse', 'wallet',
+    'hat', 'hats', 'cap', 'caps', 'sunglasses', 'glasses', 'watch',
+    'belt', 'belts', 'scarf', 'scarves', 'gloves', 'socks',
+    'underwear', 'lingerie', 'bra', 'panties', 'boxers',
+    'briefs', 'case', 'cover', 'frame', 'display', 'poster', 'print',  // ✅ FIXED
+    'keychain', 'sticker', 'mug', 'bottle', 'gift card'
+]
 };
 
 // ============================================================================
