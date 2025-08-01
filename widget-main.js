@@ -110,6 +110,76 @@ const CLOTHING_CATEGORIES = {
 
 // Dynamic clothing data from Supabase
 let sampleClothing = [];
+// Check if a product is a clothing item
+function isClothingItem(product) {
+    // Convert to lowercase for comparison
+    const productType = (product.category || '').toLowerCase();
+    const productName = (product.name || '').toLowerCase();
+    const productTags = (product.tags || []).map(tag => tag.toLowerCase());
+    
+    // Check if explicitly excluded
+    for (const excluded of CLOTHING_CATEGORIES.excluded) {
+        if (productType.includes(excluded) || 
+            productName.includes(excluded) ||
+            productTags.some(tag => tag.includes(excluded))) {
+            console.log(`❌ Excluded: ${product.name} (matched: ${excluded})`);
+            return false;
+        }
+    }
+    
+    // Check if in allowed categories
+    for (const allowed of CLOTHING_CATEGORIES.allowed) {
+        if (productType.includes(allowed) || 
+            productName.includes(allowed) ||
+            productTags.some(tag => tag.includes(allowed))) {
+            return true;
+        }
+    }
+    
+    // Additional smart checks
+    if (hasClothingSizeVariants(product)) {
+        return true;
+    }
+    
+    // If product type is empty or generic, check the name
+    if (!productType || productType === 'product' || productType === '') {
+        return isLikelyClothingByName(productName);
+    }
+    
+    console.log(`⚠️ Uncertain item excluded: ${product.name} (type: ${productType})`);
+    return false;
+}
+
+// Check if product has clothing-style size variants
+function hasClothingSizeVariants(product) {
+    // Check if product has typical clothing size options
+    const clothingSizes = ['xs', 's', 'm', 'l', 'xl', 'xxl', 'xxxl', 
+                          'small', 'medium', 'large', 'x-large',
+                          '0', '2', '4', '6', '8', '10', '12', '14', '16'];
+    
+    if (product.variants && product.variants.length > 1) {
+        const sizes = product.variants
+            .map(v => (v.size || v.title || '').toLowerCase())
+            .filter(size => clothingSizes.includes(size));
+        
+        return sizes.length > 0;
+    }
+    
+    return false;
+}
+
+// Check if product name suggests it's clothing
+function isLikelyClothingByName(name) {
+    // Check if the product name contains clothing-related terms
+    const clothingTerms = ['wear', 'outfit', 'garment', 'attire', 'apparel'];
+    return clothingTerms.some(term => name.includes(term));
+}
+// Helper function to extract color from product data
+function getColorFromProduct(product) {
+// Check product tags for colors
+const colors = ['red', 'blue', 'green', 'black', 'white', 'pink', 'yellow', 'purple', 'orange', 'brown', 'gray', 'navy', 'beige'];
+
+
 
 // Load clothing data from active_clothing_items view
 // Load clothing data from active_clothing_items table
@@ -342,75 +412,7 @@ console.log('❌ No current product detected');
 return null;
 }
 
-// Helper function to extract color from product data
-function getColorFromProduct(product) {
-// Check product tags for colors
-const colors = ['red', 'blue', 'green', 'black', 'white', 'pink', 'yellow', 'purple', 'orange', 'brown', 'gray', 'navy', 'beige'];
 
-// Check if a product is a clothing item
-function isClothingItem(product) {
-    // Convert to lowercase for comparison
-    const productType = (product.category || '').toLowerCase();
-    const productName = (product.name || '').toLowerCase();
-    const productTags = (product.tags || []).map(tag => tag.toLowerCase());
-    
-    // Check if explicitly excluded
-    for (const excluded of CLOTHING_CATEGORIES.excluded) {
-        if (productType.includes(excluded) || 
-            productName.includes(excluded) ||
-            productTags.some(tag => tag.includes(excluded))) {
-            console.log(`❌ Excluded: ${product.name} (matched: ${excluded})`);
-            return false;
-        }
-    }
-    
-    // Check if in allowed categories
-    for (const allowed of CLOTHING_CATEGORIES.allowed) {
-        if (productType.includes(allowed) || 
-            productName.includes(allowed) ||
-            productTags.some(tag => tag.includes(allowed))) {
-            return true;
-        }
-    }
-    
-    // Additional smart checks
-    if (hasClothingSizeVariants(product)) {
-        return true;
-    }
-    
-    // If product type is empty or generic, check the name
-    if (!productType || productType === 'product' || productType === '') {
-        return isLikelyClothingByName(productName);
-    }
-    
-    console.log(`⚠️ Uncertain item excluded: ${product.name} (type: ${productType})`);
-    return false;
-}
-
-// Check if product has clothing-style size variants
-function hasClothingSizeVariants(product) {
-    // Check if product has typical clothing size options
-    const clothingSizes = ['xs', 's', 'm', 'l', 'xl', 'xxl', 'xxxl', 
-                          'small', 'medium', 'large', 'x-large',
-                          '0', '2', '4', '6', '8', '10', '12', '14', '16'];
-    
-    if (product.variants && product.variants.length > 1) {
-        const sizes = product.variants
-            .map(v => (v.size || v.title || '').toLowerCase())
-            .filter(size => clothingSizes.includes(size));
-        
-        return sizes.length > 0;
-    }
-    
-    return false;
-}
-
-// Check if product name suggests it's clothing
-function isLikelyClothingByName(name) {
-    // Check if the product name contains clothing-related terms
-    const clothingTerms = ['wear', 'outfit', 'garment', 'attire', 'apparel'];
-    return clothingTerms.some(term => name.includes(term));
-}
     
 // Check tags first
 if (product.tags) {
