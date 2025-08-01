@@ -78,6 +78,32 @@ const WIDGET_CONFIG = {
     RETRY_DELAY: 1000
 };
 
+// Clothing Categories Configuration
+const CLOTHING_CATEGORIES = {
+    // Allowed categories (lowercase)
+    allowed: [
+        'clothing', 'apparel', 'dress', 'dresses', 'shirt', 'shirts', 
+        'top', 'tops', 'blouse', 'blouses', 't-shirt', 't-shirts',
+        'sweater', 'sweaters', 'jacket', 'jackets', 'coat', 'coats',
+        'pants', 'trousers', 'jeans', 'shorts', 'skirt', 'skirts',
+        'suit', 'suits', 'romper', 'rompers', 'jumpsuit', 'jumpsuits',
+        'cardigan', 'cardigans', 'hoodie', 'hoodies', 'sweatshirt',
+        'vest', 'vests', 'blazer', 'blazers', 'tank', 'tanks',
+        'bodysuit', 'bodysuits', 'leggings', 'tights', 'kimono',
+        'tunic', 'tunics', 'poncho', 'ponchos', 'cape', 'capes'
+    ],
+    // Explicitly excluded categories
+    excluded: [
+        'shoes', 'footwear', 'boots', 'sandals', 'sneakers', 'heels',
+        'accessories', 'jewelry', 'jewellery', 'bags', 'purse', 'wallet',
+        'hat', 'hats', 'cap', 'caps', 'sunglasses', 'glasses', 'watch',
+        'belt', 'belts', 'scarf', 'scarves', 'gloves', 'socks',
+        'underwear', 'lingerie', 'bra', 'panties', 'boxers',
+        'briefs''case', 'cover', 'frame', 'display', 'poster', 'print',
+        'keychain', 'sticker', 'mug', 'bottle', 'gift card'
+    ]
+};
+
 // ============================================================================
 // DATA STORAGE
 // ============================================================================
@@ -137,35 +163,39 @@ async function loadClothingData() {
         console.log('✅ Shopify products loaded:', data.products.length);
 
         // Convert Shopify products to widget format
-        sampleClothing = data.products
-            .filter(product => product && product.handle && product.title)
-            .map(product => {
-                const firstVariant = product.variants?.[0] || {};
-                const firstImage = product.images?.[0] || {};
-                
-                return {
-                    id: product.handle,
-                    name: product.title,
-                    price: parseFloat(firstVariant.price || 0),
-                    category: product.product_type?.toLowerCase() || 'clothing',
-                    color: getColorFromProduct(product),
-                    image_url: firstImage.src || '',
-                    product_url: `https://${storeName}.myshopify.com/products/${product.handle}`,
-                    shopify_product_id: product.id,
-                    variants: (product.variants || []).map(variant => ({
-                        id: variant.id,
-                        title: variant.title,
-                        price: parseFloat(variant.price || 0),
-                        available: variant.available || false,
-                        size: variant.option1,
-                        color: variant.option2,
-                        option3: variant.option3
-                    }))
-                };
-            });
+const allProducts = data.products
+    .filter(product => product && product.handle && product.title)
+    .map(product => {
+        const firstVariant = product.variants?.[0] || {};
+        const firstImage = product.images?.[0] || {};
+        
+        return {
+            id: product.handle,
+            name: product.title,
+            price: parseFloat(firstVariant.price || 0),
+            category: product.product_type?.toLowerCase() || 'clothing',
+            tags: product.tags || [], // ADD THIS LINE
+            color: getColorFromProduct(product),
+            image_url: firstImage.src || '',
+            product_url: `https://${storeName}.myshopify.com/products/${product.handle}`,
+            shopify_product_id: product.id,
+            variants: (product.variants || []).map(variant => ({
+                id: variant.id,
+                title: variant.title,
+                price: parseFloat(variant.price || 0),
+                available: variant.available || false,
+                size: variant.option1,
+                color: variant.option2,
+                option3: variant.option3
+            }))
+        };
+    });
 
-        console.log(`✅ Loaded ${sampleClothing.length} products from Shopify`);
+// FILTER TO ONLY CLOTHING ITEMS
+sampleClothing = allProducts.filter(product => isClothingItem(product));
 
+console.log(`✅ Loaded ${allProducts.length} total products from Shopify`);
+console.log(`✅ Filtered to ${sampleClothing.length} clothing items`);
         // Refresh UI if widget is open
         if (widgetOpen && currentMode === 'tryon') {
             await populateFeaturedAndQuickPicks();
@@ -317,6 +347,71 @@ function getColorFromProduct(product) {
 // Check product tags for colors
 const colors = ['red', 'blue', 'green', 'black', 'white', 'pink', 'yellow', 'purple', 'orange', 'brown', 'gray', 'navy', 'beige'];
 
+// Check if a product is a clothing item
+function isClothingItem(product) {
+    // Convert to lowercase for comparison
+    const productType = (product.category || '').toLowerCase();
+    const productName = (product.name || '').toLowerCase();
+    const productTags = (product.tags || []).map(tag => tag.toLowerCase());
+    
+    // Check if explicitly excluded
+    for (const excluded of CLOTHING_CATEGORIES.excluded) {
+        if (productType.includes(excluded) || 
+            productName.includes(excluded) ||
+            productTags.some(tag => tag.includes(excluded))) {
+            console.log(`❌ Excluded: ${product.name} (matched: ${excluded})`);
+            return false;
+        }
+    }
+    
+    // Check if in allowed categories
+    for (const allowed of CLOTHING_CATEGORIES.allowed) {
+        if (productType.includes(allowed) || 
+            productName.includes(allowed) ||
+            productTags.some(tag => tag.includes(allowed))) {
+            return true;
+        }
+    }
+    
+    // Additional smart checks
+    if (hasClothingSizeVariants(product)) {
+        return true;
+    }
+    
+    // If product type is empty or generic, check the name
+    if (!productType || productType === 'product' || productType === '') {
+        return isLikelyClothingByName(productName);
+    }
+    
+    console.log(`⚠️ Uncertain item excluded: ${product.name} (type: ${productType})`);
+    return false;
+}
+
+// Check if product has clothing-style size variants
+function hasClothingSizeVariants(product) {
+    // Check if product has typical clothing size options
+    const clothingSizes = ['xs', 's', 'm', 'l', 'xl', 'xxl', 'xxxl', 
+                          'small', 'medium', 'large', 'x-large',
+                          '0', '2', '4', '6', '8', '10', '12', '14', '16'];
+    
+    if (product.variants && product.variants.length > 1) {
+        const sizes = product.variants
+            .map(v => (v.size || v.title || '').toLowerCase())
+            .filter(size => clothingSizes.includes(size));
+        
+        return sizes.length > 0;
+    }
+    
+    return false;
+}
+
+// Check if product name suggests it's clothing
+function isLikelyClothingByName(name) {
+    // Check if the product name contains clothing-related terms
+    const clothingTerms = ['wear', 'outfit', 'garment', 'attire', 'apparel'];
+    return clothingTerms.some(term => name.includes(term));
+}
+    
 // Check tags first
 if (product.tags) {
 for (let tag of product.tags) {
