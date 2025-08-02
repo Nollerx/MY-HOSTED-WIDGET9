@@ -225,9 +225,8 @@ body {
         height: calc(100vh - 20px);
         max-height: 750px;
         border-radius: 6px;
-        transform-origin: right bottom !important;
-        transform: scale(1) !important;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        transform-origin: right bottom;
+        transform: scale(1);
     }
 
     .virtual-tryon-widget.widget-minimized {
@@ -236,9 +235,7 @@ body {
         left: auto !important;
         width: 64px !important;
         height: 64px !important;
-        transform: scale(0.1) !important;
-        transform-origin: right bottom !important;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        transform: scale(0.1);
     }
 }
 
@@ -251,15 +248,23 @@ body {
         height: calc(100vh - 10px);
         max-height: none;
         border-radius: 6px;
-        transform-origin: right bottom !important;
-        transform: scale(1) !important;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        transform-origin: right bottom;
+        transform: scale(1);
     }
-    
+}
+
+/* Mobile-specific minimized widget styles */
+@media (max-width: 768px) {
     .virtual-tryon-widget.widget-minimized {
-        transform: scale(0.1) !important;
-        transform-origin: right bottom !important;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        transform: scale(0.1);
+        transform-origin: right bottom;
+    }
+}
+
+@media (max-width: 480px) {
+    .virtual-tryon-widget.widget-minimized {
+        transform: scale(0.1);
+        transform-origin: right bottom;
     }
 }
 
@@ -277,14 +282,17 @@ body {
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
     animation: subtleGlow 4s ease-in-out infinite;
     border: 1px solid #d0d0d0;
+    transform: scale(1);
 }
 
 @keyframes subtleGlow {
     0%, 100% { 
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0,0,0,0.1);
+        transform: translateY(0);
     }
     50% { 
         box-shadow: 0 16px 50px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
     }
 }
 
@@ -3405,7 +3413,7 @@ body {
     <!-- Remove the inline <script> tag and replace it with an external script reference -->
     <script src="https://nollerx.github.io/MY-HOSTED-WIDGET9/widget-main.js"></script>
     
-    <!-- Override script to fix loading spinner order and widget animation -->
+    <!-- Override script to fix loading spinner order -->
     <script>
         // Override the startTryOn function to fix spinner order
         const originalStartTryOn = window.startTryOn;
@@ -3420,36 +3428,6 @@ body {
                 originalStartTryOn();
             }
         };
-
-        // Override widget open/close behavior to ensure proper mobile animation
-        document.addEventListener('DOMContentLoaded', function() {
-            const widget = document.getElementById('virtualTryonWidget');
-            
-            // Override the widget click behavior for mobile
-            if (widget) {
-                widget.addEventListener('click', function(e) {
-                    // Only handle clicks on the widget itself, not its children
-                    if (e.target === widget && widget.classList.contains('widget-minimized')) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        
-                        // Remove minimized class to open widget
-                        widget.classList.remove('widget-minimized');
-                        
-                        // Force a reflow to ensure the transition works
-                        widget.offsetHeight;
-                    }
-                });
-            }
-            
-            // Override close widget function
-            window.closeWidget = function() {
-                const widget = document.getElementById('virtualTryonWidget');
-                if (widget) {
-                    widget.classList.add('widget-minimized');
-                }
-            };
-        });
     </script>
 </body>
 </html>
