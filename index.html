@@ -1470,6 +1470,12 @@ body {
     min-height: 120px;
 }
 
+/* Text-first loading layout */
+.loading {
+    justify-content: flex-start;
+    padding-top: 20px;
+}
+
 /* Ensure loading content is always visible */
 .loading * {
     display: block !important;
@@ -1483,7 +1489,7 @@ body {
     border-top: 3px solid #333;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin: 0 auto 8px;
+    margin: 8px auto 0;
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
@@ -1544,20 +1550,7 @@ body {
     letter-spacing: 1px;
 }
 
-/* Fallback spinner that will definitely show */
-.loading::before {
-    content: '';
-    width: 32px;
-    height: 32px;
-    border: 3px solid #e0e0e0;
-    border-top: 3px solid #333;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 8px;
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
+
 
 /* Ensure the actual spinner div is visible */
 .loading .spinner {
@@ -1580,7 +1573,7 @@ body {
     border-top: 3px solid #333 !important;
     border-radius: 50% !important;
     animation: spin 1s linear infinite !important;
-    margin: 0 auto 8px !important;
+    margin: 8px auto 0 !important;
 }
 
 @keyframes spin {
