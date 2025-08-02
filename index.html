@@ -1459,7 +1459,7 @@ body {
 
 /* Loading States */
 .loading {
-    display: flex;
+    display: flex !important;
     align-items: center;
     justify-content: center;
     padding: 40px 24px;
@@ -1467,6 +1467,13 @@ body {
     text-align: center;
     flex-direction: column;
     gap: 16px;
+    min-height: 120px;
+}
+
+/* Ensure loading content is always visible */
+.loading * {
+    display: block !important;
+    visibility: visible !important;
 }
 
 .spinner {
@@ -1477,7 +1484,9 @@ body {
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto 8px;
-    display: block;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 /* Enhanced loading for try-on process */
@@ -1524,7 +1533,7 @@ body {
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto 16px;
-    display: block;
+    display: block !important;
 }
 
 .loading.tryon-processing {
@@ -1533,6 +1542,45 @@ body {
     color: #333;
     text-transform: uppercase;
     letter-spacing: 1px;
+}
+
+/* Fallback spinner that will definitely show */
+.loading::before {
+    content: '';
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e0e0e0;
+    border-top: 3px solid #333;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 8px;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Ensure the actual spinner div is visible */
+.loading .spinner {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative;
+    z-index: 1;
+}
+
+/* Bulletproof loading state for try-on */
+.loading[style*="display"] .spinner,
+.loading:not([style*="display: none"]) .spinner {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 32px !important;
+    height: 32px !important;
+    border: 3px solid #e0e0e0 !important;
+    border-top: 3px solid #333 !important;
+    border-radius: 50% !important;
+    animation: spin 1s linear infinite !important;
+    margin: 0 auto 8px !important;
 }
 
 @keyframes spin {
