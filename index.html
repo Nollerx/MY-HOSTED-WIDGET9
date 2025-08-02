@@ -3378,5 +3378,22 @@ body {
 
     <!-- Remove the inline <script> tag and replace it with an external script reference -->
     <script src="https://nollerx.github.io/MY-HOSTED-WIDGET9/widget-main.js"></script>
+    
+    <!-- Override script to fix loading spinner order -->
+    <script>
+        // Override the startTryOn function to fix spinner order
+        const originalStartTryOn = window.startTryOn;
+        window.startTryOn = function() {
+            // Show loading with text first, then spinner
+            const resultSection = document.getElementById('resultSection');
+            resultSection.innerHTML = '<div class="loading">Creating your virtual try-on...<div class="spinner"></div></div>';
+            resultSection.style.display = 'block';
+            
+            // Call the original function
+            if (originalStartTryOn) {
+                originalStartTryOn();
+            }
+        };
+    </script>
 </body>
 </html>
