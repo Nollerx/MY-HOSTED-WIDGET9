@@ -1335,6 +1335,20 @@ body {
     border-top: 1px solid #e0e0e0;
 }
 
+/* Ensure result section is visible when loading */
+#resultSection {
+    background: #ffffff;
+    border-top: 1px solid #e0e0e0;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#resultSection:empty {
+    display: none;
+}
+
 .result-container h4 {
     color: #333;
     margin-bottom: 16px;
@@ -1448,18 +1462,77 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px;
+    padding: 40px 24px;
     color: #666;
+    text-align: center;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .spinner {
-    width: 18px;
-    height: 18px;
-    border: 2px solid #e0e0e0;
-    border-top: 2px solid #999;
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e0e0e0;
+    border-top: 3px solid #333;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin-right: 12px;
+    margin: 0 auto 8px;
+    display: block;
+}
+
+/* Enhanced loading for try-on process */
+.loading.tryon-loading {
+    background: linear-gradient(135deg, #f8f8f8 0%, #ffffff 100%);
+    border-radius: 12px;
+    margin: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    border: 1px solid #e0e0e0;
+}
+
+.loading.tryon-loading .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e0e0e0;
+    border-top: 4px solid #333;
+    margin-bottom: 16px;
+}
+
+.loading.tryon-loading {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Super prominent loading for try-on process */
+.loading.tryon-processing {
+    background: linear-gradient(135deg, #f0f0f0 0%, #ffffff 100%);
+    border-radius: 16px;
+    margin: 20px;
+    padding: 40px 24px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    border: 2px solid #e0e0e0;
+    text-align: center;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.loading.tryon-processing .spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #e0e0e0;
+    border-top: 4px solid #333;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 16px;
+    display: block;
+}
+
+.loading.tryon-processing {
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 @keyframes spin {
@@ -1569,6 +1642,23 @@ body {
     
     .tryon-loading-subtitle {
         font-size: 13px;
+    }
+    
+    /* Enhanced mobile loading for result section */
+    .loading.tryon-loading {
+        margin: 16px;
+        padding: 32px 20px;
+    }
+    
+    .loading.tryon-loading .spinner {
+        width: 36px;
+        height: 36px;
+        border-width: 3px;
+        margin-bottom: 12px;
+    }
+    
+    .loading.tryon-loading {
+        font-size: 15px;
     }
 }
 
