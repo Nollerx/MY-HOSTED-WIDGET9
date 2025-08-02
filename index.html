@@ -1339,14 +1339,22 @@ body {
 #resultSection {
     background: #ffffff;
     border-top: 1px solid #e0e0e0;
-    min-height: 200px;
+    min-height: 150px;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 0;
 }
 
 #resultSection:empty {
     display: none;
+}
+
+/* Remove extra white space in result section */
+#resultSection .loading {
+    margin: 0;
+    padding: 20px;
+    min-height: auto;
 }
 
 .result-container h4 {
@@ -1474,6 +1482,24 @@ body {
 .loading {
     justify-content: flex-start;
     padding-top: 20px;
+}
+
+/* Loading text styling */
+.loading-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 16px;
+    text-align: center;
+    display: block !important;
+}
+
+/* Ensure proper spacing and layout */
+.loading {
+    gap: 16px;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 24px;
 }
 
 /* Ensure loading content is always visible */
@@ -3386,7 +3412,7 @@ body {
         window.startTryOn = function() {
             // Show loading with text first, then spinner
             const resultSection = document.getElementById('resultSection');
-            resultSection.innerHTML = '<div class="loading">Creating your virtual try-on...<div class="spinner"></div></div>';
+            resultSection.innerHTML = '<div class="loading"><div class="loading-text">Creating your virtual try-on...</div><div class="spinner"></div></div>';
             resultSection.style.display = 'block';
             
             // Call the original function
