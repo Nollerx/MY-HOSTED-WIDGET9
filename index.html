@@ -215,7 +215,7 @@ body {
     border: 1px solid #e0e0e0;
 }
 
-/* Mobile Responsive */
+/* Mobile Responsive - FIXED */
 @media (max-width: 768px) {
     .virtual-tryon-widget {
         bottom: 10px;
@@ -225,8 +225,6 @@ body {
         height: calc(100vh - 20px);
         max-height: 750px;
         border-radius: 6px;
-        transform-origin: right bottom;
-        transform: scale(1);
     }
 
     .virtual-tryon-widget.widget-minimized {
@@ -235,7 +233,13 @@ body {
         left: auto !important;
         width: 64px !important;
         height: 64px !important;
-        transform: scale(0.1);
+        transform: scale(1) !important;
+        transform-origin: right bottom !important;
+    }
+    
+    .virtual-tryon-widget:not(.widget-minimized) {
+        transform-origin: right bottom !important;
+        animation: openFromRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
 }
 
@@ -248,22 +252,26 @@ body {
         height: calc(100vh - 10px);
         max-height: none;
         border-radius: 6px;
+    }
+    
+    .virtual-tryon-widget.widget-minimized {
+        transform: scale(1) !important;
+        transform-origin: right bottom !important;
+    }
+    
+    .virtual-tryon-widget:not(.widget-minimized) {
+        transform-origin: right bottom !important;
+        animation: openFromRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+}
+
+@keyframes openFromRight {
+    0% {
+        transform: scale(0.1);
         transform-origin: right bottom;
+    }
+    100% {
         transform: scale(1);
-    }
-}
-
-/* Mobile-specific minimized widget styles */
-@media (max-width: 768px) {
-    .virtual-tryon-widget.widget-minimized {
-        transform: scale(0.1);
-        transform-origin: right bottom;
-    }
-}
-
-@media (max-width: 480px) {
-    .virtual-tryon-widget.widget-minimized {
-        transform: scale(0.1);
         transform-origin: right bottom;
     }
 }
