@@ -20,7 +20,7 @@
     padding: 16px 24px;
     border-radius: 12px;
     box-shadow: 0 10px 40px rgba(16, 185, 129, 0.3), 0 0 0 1px rgba(255,255,255,0.1);
-    z-index: 100000;
+    z-index: 2147483647;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -60,11 +60,19 @@
     opacity: 0;
 }
 
-/* Ensure notification is always on top when modals are active */
+/* Force notification to absolute top layer */
+.custom-notification {
+    z-index: 2147483647 !important;
+    position: fixed !important;
+}
+
+/* Ensure no modal can override notification z-index */
 .wardrobe-modal.active ~ .custom-notification,
 .clothing-browser-modal.active ~ .custom-notification,
-.image-modal.active ~ .custom-notification {
-    z-index: 100000 !important;
+.image-modal.active ~ .custom-notification,
+.modal-backdrop.active ~ .custom-notification {
+    z-index: 2147483647 !important;
+    position: fixed !important;
 }
 
 .notification-icon {
@@ -178,7 +186,7 @@
         left: 10px;
         max-width: none;
         transform: translateY(-100px) scale(0.9);
-        z-index: 100000;
+        z-index: 2147483647 !important;
     }
     
     /* Ensure notification is visible above modals on mobile */
