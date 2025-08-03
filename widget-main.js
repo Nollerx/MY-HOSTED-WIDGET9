@@ -1400,7 +1400,7 @@ resultSection.innerHTML = `
                 <div class="loading-spinner"></div>
                 <span class="btn-text">
                     <span class="cart-icon">🛒</span>
-                    Buy Now - $${clothing.price.toFixed(2)}
+                    Add to Cart - $${clothing.price.toFixed(2)}
                 </span>
             </button>
         </div>
@@ -2588,5 +2588,6 @@ async function addWardrobeItemToCart(tryOnId) {
         alert('❌ Network error: ' + error.message);
     }
 }
+
 
 
