@@ -1389,22 +1389,24 @@ const result = await response.json();
 
 if (result.success && result.result_image_url) {
     // SUCCESS CASE - Pass tryOnId as parameter
-    resultSection.innerHTML = `
-        <div class="result-container">
-            <h4>Your Virtual Try-On Result</h4>
-            <img src="${result.result_image_url}" alt="Try-on result" class="result-image" onclick="openImageModal('${result.result_image_url}')">
-            <p>How do you like the ${clothing.name}?</p>
-            <div class="buy-now-container">
-                <button class="buy-now-btn" onclick="handleBuyNow('${clothing.id}', '${result.result_image_url}', '${currentTryOnId}')">
-                    <div class="loading-spinner"></div>
-                    <span class="btn-text">
-                        <span class="cart-icon">🛒</span>
-                        Add to Cart - $${clothing.price.toFixed(2)}
-                    </span>
-                </button>
-            </div>
+    // In your widget-main.js file, in the startTryOn function:
+resultSection.innerHTML = `
+    <div class="result-container">
+        <h4>Your Virtual Try-On Result</h4>
+        <img src="${result.result_image_url}" alt="Try-on result" class="result-image" onclick="openImageModal('${result.result_image_url}')">
+        <p>How do you like the ${clothing.name}?</p>
+        <div class="buy-now-container">
+            <button class="buy-now-btn" onclick="handleBuyNow('${clothing.id}', '${result.result_image_url}', '${currentTryOnId}')">
+                <div class="loading-spinner"></div>
+                <span class="btn-text">
+                    <span class="cart-icon">🛒</span>
+                    Buy Now - $${clothing.price.toFixed(2)}
+                </span>
+            </button>
         </div>
-    `;
+        <div class="ello-branding">powered by <a href="https://ello.services" target="_blank">Ello.services</a></div>
+    </div>
+`;
     
     // Auto-save to wardrobe
     autoSaveToWardrobe(clothing, result.result_image_url, currentTryOnId);
@@ -2586,4 +2588,5 @@ async function addWardrobeItemToCart(tryOnId) {
         alert('❌ Network error: ' + error.message);
     }
 }
+
 
