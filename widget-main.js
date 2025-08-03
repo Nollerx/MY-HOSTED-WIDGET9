@@ -51,7 +51,7 @@ if (document.readyState === 'loading') {
     console.log('Document already loaded, waiting for manual initialization');
 }
 // Configuration
-const WEBHOOK_URL = 'https://ancesoftware.app.n8n.cloud/webhook-test/virtual-tryon-production';
+const WEBHOOK_URL = 'https://ancesoftware.app.n8n.cloud/webhook/virtual-tryon-production';
         
 // Mobile detection
 let isMobile = false;
@@ -2589,6 +2589,7 @@ async function addWardrobeItemToCart(tryOnId) {
         alert('❌ Network error: ' + error.message);
     }
 }
+
 
 
 
