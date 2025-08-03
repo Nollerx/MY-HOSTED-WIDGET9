@@ -1684,7 +1684,8 @@ existing.remove();
 // Create notification element
 const notification = document.createElement('div');
 notification.className = 'custom-notification' + (isError ? ' error' : '');
-
+notification.style.zIndex = '2147483647'; // Force maximum z-index
+notification.style.position = 'fixed'; // Ensure fixed positioning
 notification.innerHTML = `
 <div class="notification-icon">
     ${isError ? '✗' : '✓'}
@@ -2588,6 +2589,7 @@ async function addWardrobeItemToCart(tryOnId) {
         alert('❌ Network error: ' + error.message);
     }
 }
+
 
 
 
