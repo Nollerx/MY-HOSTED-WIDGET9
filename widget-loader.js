@@ -59,6 +59,16 @@
                 document.head.appendChild(styleElement);
                 console.log('Styles injected');
             }
+
+            // Inject link elements (e.g., external stylesheets, fonts)
+            const links = doc.querySelectorAll('link[rel="stylesheet"], link[rel="preconnect"], link[rel="icon"], link[rel="preload"]');
+            links.forEach(link => {
+                const linkElement = document.createElement('link');
+                Array.from(link.attributes).forEach(attr => {
+                    linkElement.setAttribute(attr.name, attr.value);
+                });
+                document.head.appendChild(linkElement);
+            });
             
             // Remove script tags from body
             const scripts = doc.querySelectorAll('script');
