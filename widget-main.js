@@ -269,18 +269,19 @@ async function loadClothingData() {
 
 // Load clothing from Shopify
 async function loadClothingFromShopify(storeConfig) {
-    const storeName = storeConfig.storeName || 'm8ir6h-8k';
-    console.log('🛍️ Loading products from Shopify store:', storeName);
-
-    // Clean up store name - remove spaces and special characters
-    const cleanStoreName = storeName.replace(/[^a-zA-Z0-9-]/g, '').toLowerCase();
-    console.log('🛍️ Cleaned store name:', cleanStoreName);
+    // For Shopify, we need to use the storeName as the Shopify store ID
+    // storeName from the script tag contains the actual Shopify store ID (e.g., "m8ir6h-8k")
+    const shopifyStoreId = storeConfig.storeName || 'm8ir6h-8k';
+    const storeId = storeConfig.storeId || 'default-store';
+    console.log('🛍️ Loading products from Shopify store ID:', shopifyStoreId);
+    console.log('🛍️ Supabase store ID:', storeId);
 
     // Try multiple approaches to access Shopify store
     const possibleUrls = [
-        `https://${cleanStoreName}.myshopify.com/products.json`,
-        `https://${storeName.replace(/\s+/g, '-')}.myshopify.com/products.json`,
-        `https://${storeName.replace(/\s+/g, '')}.myshopify.com/products.json`
+        `https://${shopifyStoreId}.myshopify.com/products.json`,  // Primary: use Shopify store ID
+        `https://${shopifyStoreId.replace(/[^a-zA-Z0-9-]/g, '').toLowerCase()}.myshopify.com/products.json`,
+        `https://${shopifyStoreId.replace(/\s+/g, '-')}.myshopify.com/products.json`,
+        `https://${shopifyStoreId.replace(/\s+/g, '')}.myshopify.com/products.json`
     ];
 
     let successfulResponse = null;
@@ -339,7 +340,7 @@ async function loadClothingFromShopify(storeConfig) {
                 tags: product.tags || [],
                 color: getColorFromProduct(product),
                 image_url: firstImage.src || '',
-                product_url: `https://${cleanStoreName}.myshopify.com/products/${product.handle}`,
+                product_url: `https://${shopifyStoreId}.myshopify.com/products/${product.handle}`,
                 shopify_product_id: product.id,
                 data_source: 'shopify',
                 variants: (product.variants || []).map(variant => ({
@@ -2894,6 +2895,3 @@ async function addWardrobeItemToCart(tryOnId) {
         alert('❌ Network error: ' + error.message);
     }
 }
-
-
-
