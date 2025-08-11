@@ -15,40 +15,42 @@
     window.ELLO_STORE_NAME = storeName;
     
     // Fetch store configuration from Supabase
-    async function fetchStoreConfiguration() {
-        try {
-            const response = await fetch(`https://rwmvgwnebnsqcyhhurti.supabase.co/rest/v1/stores?store_id=eq.${storeId}`, {
-                headers: {
-                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ3bXZnd25lYm5zcWN5aGh1cnRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0MDc1MTgsImV4cCI6MjA2Mzk4MzUxOH0.OYTXiUBDN5IBlFYDHN3MyCwFUkSb8sgUOewBeSY01NY',
-                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ3bXZnd25lYm5zcWN5aGh1cnRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0MDc1MTgsImV4cCI6MjA2Mzk4MzUxOH0.OYTXiUBDN5IBlFYDHN3MyCwFUkSb8sgUOewBeSY01NY'
-                }
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                if (data && data.length > 0) {
-                    const storeConfig = data[0];
-                    window.ELLO_STORE_CONFIG = {
-                        storeId: storeConfig.store_id,
-                        storeName: storeConfig.store_name,
-                        clothingPopulationType: storeConfig.clothing_population_type || 'shopify',
-                        planName: storeConfig.plan_name
-                    };
-                    console.log('✅ Store configuration loaded:', window.ELLO_STORE_CONFIG);
-                } else {
-                    // Fallback to default configuration
-                    window.ELLO_STORE_CONFIG = {
-                        storeId: storeId,
-                        storeName: storeName,
-                        clothingPopulationType: 'shopify',
-                        planName: 'STARTER'
-                    };
-                    console.log('⚠️ Store not found, using default configuration');
-                }
-            } else {
-                throw new Error(`HTTP error! status: ${response.status}`);
+    function fetchStoreConfiguration() {
+        fetch(`https://rwmvgwnebnsqcyhhurti.supabase.co/rest/v1/stores?store_id=eq.${storeId}`, {
+            headers: {
+                'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ3bXZnd25lYm5zcWN5aGh1cnRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0MDc1MTgsImV4cCI6MjA2Mzk4MzUxOH0.OYTXiUBDN5IBlFYDHN3MyCwFUkSb8sgUOewBeSY01NY',
+                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ3bXZnd25lYm5zcWN5aGh1cnRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0MDc1MTgsImV4cCI6MjA2Mzk4MzUxOH0.OYTXiUBDN5IBlFYDHN3MyCwFUkSb8sgUOewBeSY01NY'
             }
-        } catch (error) {
+        })
+        .then(function(response) {
+            if (response.ok) {
+                return response.json();
+            } else {
+                throw new Error('HTTP error! status: ' + response.status);
+            }
+        })
+        .then(function(data) {
+            if (data && data.length > 0) {
+                var storeConfig = data[0];
+                window.ELLO_STORE_CONFIG = {
+                    storeId: storeConfig.store_id,
+                    storeName: storeConfig.store_name,
+                    clothingPopulationType: storeConfig.clothing_population_type || 'shopify',
+                    planName: storeConfig.plan_name
+                };
+                console.log('✅ Store configuration loaded:', window.ELLO_STORE_CONFIG);
+            } else {
+                // Fallback to default configuration
+                window.ELLO_STORE_CONFIG = {
+                    storeId: storeId,
+                    storeName: storeName,
+                    clothingPopulationType: 'shopify',
+                    planName: 'STARTER'
+                };
+                console.log('⚠️ Store not found, using default configuration');
+            }
+        })
+        .catch(function(error) {
             console.error('❌ Error fetching store configuration:', error);
             // Fallback to default configuration
             window.ELLO_STORE_CONFIG = {
@@ -57,7 +59,7 @@
                 clothingPopulationType: 'shopify',
                 planName: 'STARTER'
             };
-        }
+        });
     }
     
     // Fetch store configuration before loading widget
