@@ -51,7 +51,7 @@ if (document.readyState === 'loading') {
     console.log('Document already loaded, waiting for manual initialization');
 }
 // Configuration
-const WEBHOOK_URL = 'https://ancesoftware.app.n8n.cloud/webhook/virtual-tryon-production';
+const WEBHOOK_URL = 'https://ancesoftware.app.n8n.cloud/webhook-test/virtual-tryon-production';
         
 // Mobile detection
 let isMobile = false;
@@ -177,104 +177,37 @@ function isLikelyClothingByName(name) {
 let sampleClothing = [];
 
 // Load clothing data from active_clothing_items view
-// Load clothing data from active_clothing_items table
+// Load clothing data based on store configuration
 async function loadClothingData() {
     try {
-        const storeName = window.ELLO_STORE_NAME || 'm8ir6h-8k';
-        console.log('Loading products from Shopify store:', storeName);
-
-        // First, let's check if we can access the Shopify store
-        const testUrl = `https://${storeName}.myshopify.com/products.json?limit=1`;
-        
-        try {
-            const testResponse = await fetch(testUrl, {
-                method: 'GET',
-                mode: 'cors', // Explicitly set CORS mode
-                headers: {
-                    'Accept': 'application/json',
-                }
-            });
-            
-            if (!testResponse.ok) {
-                throw new Error(`Shopify store not accessible: ${testResponse.status}`);
-            }
-        } catch (corsError) {
-            console.warn('CORS issue detected, trying alternative method...');
-            
-            // Alternative: Try JSONP approach or use a proxy
-            // For now, we'll use demo data
-            throw new Error('CORS restriction on Shopify store');
-        }
-
-        // If test passed, load all products
-        const response = await fetchWithRetry(`https://${storeName}.myshopify.com/products.json?limit=250`, {
-            method: 'GET',
-            mode: 'cors',
-            headers: {
-                'Accept': 'application/json',
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        
-        if (!data.products || !Array.isArray(data.products)) {
-            throw new Error('Invalid data format received from Shopify');
-        }
-
-        console.log('✅ Shopify products loaded:', data.products.length);
-
-        // Convert Shopify products to widget format
-const allProducts = data.products
-    .filter(product => product && product.handle && product.title)
-    .map(product => {
-        const firstVariant = product.variants?.[0] || {};
-        const firstImage = product.images?.[0] || {};
-        
-        return {
-            id: product.handle,
-            name: product.title,
-            price: parseFloat(firstVariant.price || 0),
-            category: product.product_type?.toLowerCase() || 'clothing',
-            tags: product.tags || [], // ADD THIS LINE
-            color: getColorFromProduct(product),
-            image_url: firstImage.src || '',
-            product_url: `https://${storeName}.myshopify.com/products/${product.handle}`,
-            shopify_product_id: product.id,
-            variants: (product.variants || []).map(variant => ({
-                id: variant.id,
-                title: variant.title,
-                price: parseFloat(variant.price || 0),
-                available: variant.available || false,
-                size: variant.option1,
-                color: variant.option2,
-                option3: variant.option3
-            }))
+        const storeConfig = window.ELLO_STORE_CONFIG || {
+            storeId: window.ELLO_STORE_ID || 'default-store',
+            storeName: window.ELLO_STORE_NAME || 'default-name',
+            clothingPopulationType: 'shopify',
+            planName: 'STARTER'
         };
-    });
-
-// FILTER TO ONLY CLOTHING ITEMS
-sampleClothing = allProducts.filter(product => isClothingItem(product));
-
-console.log(`✅ Loaded ${allProducts.length} total products from Shopify`);
-console.log(`✅ Filtered to ${sampleClothing.length} clothing items`);
-
+        
+        console.log('🔄 Loading clothing data with configuration:', storeConfig);
+        
+        if (storeConfig.clothingPopulationType === 'supabase') {
+            await loadClothingFromSupabase(storeConfig);
+        } else {
+            await loadClothingFromShopify(storeConfig);
+        }
+        
         // Refresh UI if widget is open
         if (widgetOpen && currentMode === 'tryon') {
             await populateFeaturedAndQuickPicks();
         }
-
+        
     } catch (error) {
-        console.error('❌ Error loading from Shopify:', error);
+        console.error('❌ Error loading clothing data:', error);
         
         // Show user-friendly error message
         if (typeof showSuccessNotification === 'function') {
             showSuccessNotification('Connection Error', 'Unable to load products. Using demo data.', 5000);
         }
-
+        
         // Use comprehensive demo data
         sampleClothing = [
             {
@@ -314,6 +247,151 @@ console.log(`✅ Filtered to ${sampleClothing.length} clothing items`);
         ];
         
         console.log('Using demo data with', sampleClothing.length, 'items');
+    }
+}
+
+// Load clothing from Shopify
+async function loadClothingFromShopify(storeConfig) {
+    const storeName = storeConfig.storeName || 'm8ir6h-8k';
+    console.log('🛍️ Loading products from Shopify store:', storeName);
+
+    // First, let's check if we can access the Shopify store
+    const testUrl = `https://${storeName}.myshopify.com/products.json?limit=1`;
+    
+    try {
+        const testResponse = await fetch(testUrl, {
+            method: 'GET',
+            mode: 'cors',
+            headers: {
+                'Accept': 'application/json',
+            }
+        });
+        
+        if (!testResponse.ok) {
+            throw new Error(`Shopify store not accessible: ${testResponse.status}`);
+        }
+    } catch (corsError) {
+        console.warn('CORS issue detected, trying alternative method...');
+        throw new Error('CORS restriction on Shopify store');
+    }
+
+    // If test passed, load all products
+    const response = await fetchWithRetry(`https://${storeName}.myshopify.com/products.json?limit=250`, {
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+            'Accept': 'application/json',
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (!data.products || !Array.isArray(data.products)) {
+        throw new Error('Invalid data format received from Shopify');
+    }
+
+    console.log('✅ Shopify products loaded:', data.products.length);
+
+    // Convert Shopify products to widget format
+    const allProducts = data.products
+        .filter(product => product && product.handle && product.title)
+        .map(product => {
+            const firstVariant = product.variants?.[0] || {};
+            const firstImage = product.images?.[0] || {};
+            
+            return {
+                id: product.handle,
+                name: product.title,
+                price: parseFloat(firstVariant.price || 0),
+                category: product.product_type?.toLowerCase() || 'clothing',
+                tags: product.tags || [],
+                color: getColorFromProduct(product),
+                image_url: firstImage.src || '',
+                product_url: `https://${storeName}.myshopify.com/products/${product.handle}`,
+                shopify_product_id: product.id,
+                data_source: 'shopify',
+                variants: (product.variants || []).map(variant => ({
+                    id: variant.id,
+                    title: variant.title,
+                    price: parseFloat(variant.price || 0),
+                    available: variant.available || false,
+                    size: variant.option1,
+                    color: variant.option2,
+                    option3: variant.option3
+                }))
+            };
+        });
+
+    // FILTER TO ONLY CLOTHING ITEMS
+    sampleClothing = allProducts.filter(product => isClothingItem(product));
+
+    console.log(`✅ Loaded ${allProducts.length} total products from Shopify`);
+    console.log(`✅ Filtered to ${sampleClothing.length} clothing items`);
+}
+
+// Load clothing from Supabase
+async function loadClothingFromSupabase(storeConfig) {
+    console.log('🗄️ Loading products from Supabase for store:', storeConfig.storeId);
+    
+    try {
+        // Fetch clothing items from Supabase
+        const response = await fetch(`https://rwmvgwnebnsqcyhhurti.supabase.co/rest/v1/clothing_items?store_id=eq.${storeConfig.storeId}&active=eq.true`, {
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (!Array.isArray(data)) {
+            throw new Error('Invalid data format received from Supabase');
+        }
+
+        console.log('✅ Supabase products loaded:', data.length);
+
+        // Convert Supabase products to widget format
+        const allProducts = data
+            .filter(item => item && item.name && item.image_url)
+            .map(item => {
+                return {
+                    id: item.item_id || item.id || `supabase_${item.name.toLowerCase().replace(/\s+/g, '_')}`,
+                    name: item.name,
+                    price: parseFloat(item.price || 0),
+                    category: item.category?.toLowerCase() || 'clothing',
+                    tags: item.tags || [],
+                    color: item.color || 'multicolor',
+                    image_url: item.image_url,
+                    product_url: item.product_url || '#',
+                    data_source: 'supabase',
+                    variants: item.variants || [{
+                        id: item.item_id || item.id,
+                        title: 'Default',
+                        price: parseFloat(item.price || 0),
+                        available: true,
+                        size: 'M'
+                    }]
+                };
+            });
+
+        // FILTER TO ONLY CLOTHING ITEMS
+        sampleClothing = allProducts.filter(product => isClothingItem(product));
+
+        console.log(`✅ Loaded ${allProducts.length} total products from Supabase`);
+        console.log(`✅ Filtered to ${sampleClothing.length} clothing items`);
+
+    } catch (error) {
+        console.error('❌ Error loading from Supabase:', error);
+        throw error;
     }
 }
 
@@ -774,6 +852,11 @@ quickPicksPool = varietyItems.slice(1);
 console.log('📦 Using variety-based featured item:', featuredItem.name);
 }
 
+// Get data source info
+const storeConfig = window.ELLO_STORE_CONFIG || {};
+const dataSourceIcon = storeConfig.clothingPopulationType === 'supabase' ? '🗄️' : '🛍️';
+const dataSourceText = storeConfig.clothingPopulationType === 'supabase' ? 'Custom' : 'Shopify';
+
 // Populate featured item section
 const featuredContainer = document.getElementById('featuredItem');
 const badgeText = currentProduct ? 'Current Page' : 'Trending';
@@ -785,6 +868,9 @@ featuredContainer.innerHTML = `
         <div class="featured-name">${featuredItem.name}</div>
         <div class="featured-price">$${featuredItem.price.toFixed(2)}</div>
         <div class="featured-badge">${badgeText}</div>
+        <div class="featured-source" style="font-size: 10px; color: #666; margin-top: 4px;">
+            ${dataSourceIcon} ${dataSourceText}
+        </div>
     </div>
 </div>
 `;
@@ -795,11 +881,17 @@ const quickPicksGrid = document.getElementById('quickPicksGrid');
 
 let quickPicksHTML = '';
 quickPicks.forEach(item => {
+const itemDataSourceIcon = item.data_source === 'supabase' ? '🗄️' : '🛍️';
+const itemDataSourceText = item.data_source === 'supabase' ? 'Custom' : 'Shopify';
+
 quickPicksHTML += `
     <div class="quick-pick-item" onclick="selectClothing('${item.id}')">
         <img src="${item.image_url}" alt="${item.name}" class="quick-pick-image">
         <div class="quick-pick-name">${item.name}</div>
         <div class="quick-pick-price">$${item.price.toFixed(2)}</div>
+        <div class="quick-pick-source" style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.7); color: white; padding: 2px 4px; border-radius: 2px; font-size: 8px; z-index: 2;">
+            ${itemDataSourceIcon}
+        </div>
     </div>
 `;
 });
@@ -1684,8 +1776,7 @@ existing.remove();
 // Create notification element
 const notification = document.createElement('div');
 notification.className = 'custom-notification' + (isError ? ' error' : '');
-notification.style.zIndex = '2147483647'; // Force maximum z-index
-notification.style.position = 'fixed'; // Ensure fixed positioning
+
 notification.innerHTML = `
 <div class="notification-icon">
     ${isError ? '✗' : '✓'}
@@ -1852,101 +1943,262 @@ if (clothing.variants.length === 1) {
     buyBtn.disabled = true;
 }
 
-// 1. ADD TO SHOPIFY CART (Real functionality)
-const cartResponse = await fetch('/cart/add.js', {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-        id: variantToAdd.id,
-        quantity: 1
-    })
-});
-
-if (cartResponse.ok) {
-    const cartResult = await cartResponse.json();
-    console.log('✅ Successfully added to cart:', cartResult);
-    
-    // Show success notification
-    const sizeText = variantToAdd.size || variantToAdd.title || '';
-    const sizeDisplay = sizeText ? `Size ${sizeText}` : '';
-    showSuccessNotification(
-        'Added to Cart!',
-        `${clothing.name} ${sizeDisplay ? `• ${sizeDisplay}` : ''}`
-    );
-    
-    // Update cart display
-    await updateCartDisplay();
-    
-    // 2. SEND WEBHOOK FOR ANALYTICS TRACKING
-    try {
-        const conversionData = {
-            mode: 'conversion',
-            tryOnId: tryOnId,
-            sessionId: sessionId,
-            storeId: window.ELLO_STORE_ID || 'default_store',
-            conversionType: 'add_to_cart',
-            revenueAmount: variantToAdd.price,
-            selectedClothing: {
-                id: clothing.id,
-                name: clothing.name,
-                price: variantToAdd.price.toFixed(2),
-                category: clothing.category,
-                color: clothing.color,
-                image_url: clothing.image_url,
-                variant_id: variantToAdd.id,
-                size: variantToAdd.size || variantToAdd.title
-            },
-            tryonResultUrl: tryonResultUrl,
-            shopifyCartResult: cartResult,
-            deviceInfo: {
-                isMobile: isMobile,
-                isTablet: isTablet,
-                isIOS: isIOS,
-                isAndroid: isAndroid,
-                viewport: {
-                    width: window.innerWidth,
-                    height: window.innerHeight
-                }
-            },
-            timestamp: new Date().toISOString()
-        };
-        
-        // Send analytics webhook (don't block on this)
-        fetch(WEBHOOK_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(conversionData)
-        }).then(response => {
-            if (response.ok) {
-                console.log('✅ Analytics tracked successfully');
-            } else {
-                console.log('⚠️ Analytics tracking failed, but cart add succeeded');
-            }
-        }).catch(error => {
-            console.log('⚠️ Analytics tracking error:', error);
-        });
-        
-    } catch (webhookError) {
-        console.log('⚠️ Webhook tracking failed:', webhookError);
-    }
-    
+// Handle different data sources
+if (clothing.data_source === 'shopify') {
+    await handleShopifyPurchase(clothing, variantToAdd, tryonResultUrl, tryOnId);
+} else if (clothing.data_source === 'supabase') {
+    await handleSupabasePurchase(clothing, variantToAdd, tryonResultUrl, tryOnId);
 } else {
-    const errorText = await cartResponse.text();
-    console.error('❌ Shopify cart error:', errorText);
-    alert(`❌ Failed to add to cart. Error: ${cartResponse.status}`);
+    // Fallback for demo data or unknown sources
+    await handleDemoPurchase(clothing, variantToAdd, tryonResultUrl, tryOnId);
 }
 
 } catch (error) {
-console.error('❌ Network error:', error);
-alert('❌ Network error: ' + error.message);
+console.error('❌ Purchase error:', error);
+alert('❌ Purchase error: ' + error.message);
 } finally {
 buyBtn.classList.remove('loading');
 buyBtn.disabled = false;
 }
+}
+
+// Handle Shopify purchases
+async function handleShopifyPurchase(clothing, variantToAdd, tryonResultUrl, tryOnId) {
+try {
+    // Add to Shopify cart
+    const cartResponse = await fetch('/cart/add.js', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            id: variantToAdd.id,
+            quantity: 1
+        })
+    });
+
+    if (cartResponse.ok) {
+        const cartResult = await cartResponse.json();
+        console.log('✅ Successfully added to Shopify cart:', cartResult);
+        
+        // Show success notification
+        const sizeText = variantToAdd.size || variantToAdd.title || '';
+        const sizeDisplay = sizeText ? `Size ${sizeText}` : '';
+        showSuccessNotification(
+            'Added to Cart!',
+            `${clothing.name} ${sizeDisplay ? `• ${sizeDisplay}` : ''}`
+        );
+        
+        // Update cart display
+        await updateCartDisplay();
+        
+        // Send analytics tracking
+        await sendAnalyticsTracking('shopify_add_to_cart', clothing, variantToAdd, tryonResultUrl, tryOnId, cartResult);
+        
+    } else {
+        const errorText = await cartResponse.text();
+        console.error('❌ Shopify cart error:', errorText);
+        alert(`❌ Failed to add to cart. Error: ${cartResponse.status}`);
+    }
+} catch (error) {
+    console.error('❌ Shopify purchase error:', error);
+    throw error;
+}
+}
+
+// Handle Supabase purchases
+async function handleSupabasePurchase(clothing, variantToAdd, tryonResultUrl, tryOnId) {
+try {
+    // For Supabase products, we'll redirect to the product URL or show a custom purchase flow
+    if (clothing.product_url && clothing.product_url !== '#') {
+        // Redirect to product page
+        window.open(clothing.product_url, '_blank');
+        showSuccessNotification(
+            'Product Page Opened',
+            `${clothing.name} - Check the new tab to complete your purchase`
+        );
+    } else {
+        // Show custom purchase modal or form
+        showCustomPurchaseModal(clothing, variantToAdd);
+    }
+    
+    // Send analytics tracking
+    await sendAnalyticsTracking('supabase_purchase_intent', clothing, variantToAdd, tryonResultUrl, tryOnId);
+    
+} catch (error) {
+    console.error('❌ Supabase purchase error:', error);
+    throw error;
+}
+}
+
+// Handle demo purchases
+async function handleDemoPurchase(clothing, variantToAdd, tryonResultUrl, tryOnId) {
+try {
+    // For demo products, show a message
+    showSuccessNotification(
+        'Demo Product',
+        `${clothing.name} is a demo product. Contact us to set up real products.`
+    );
+    
+    // Send analytics tracking
+    await sendAnalyticsTracking('demo_purchase_intent', clothing, variantToAdd, tryonResultUrl, tryOnId);
+    
+} catch (error) {
+    console.error('❌ Demo purchase error:', error);
+    throw error;
+}
+}
+
+// Send analytics tracking
+async function sendAnalyticsTracking(conversionType, clothing, variantToAdd, tryonResultUrl, tryOnId, cartResult = null) {
+try {
+    const conversionData = {
+        mode: 'conversion',
+        tryOnId: tryOnId,
+        sessionId: sessionId,
+        storeId: window.ELLO_STORE_ID || 'default_store',
+        conversionType: conversionType,
+        revenueAmount: variantToAdd.price,
+        selectedClothing: {
+            id: clothing.id,
+            name: clothing.name,
+            price: variantToAdd.price.toFixed(2),
+            category: clothing.category,
+            color: clothing.color,
+            image_url: clothing.image_url,
+            variant_id: variantToAdd.id,
+            size: variantToAdd.size || variantToAdd.title,
+            data_source: clothing.data_source
+        },
+        tryonResultUrl: tryonResultUrl,
+        shopifyCartResult: cartResult,
+        deviceInfo: {
+            isMobile: isMobile,
+            isTablet: isTablet,
+            isIOS: isIOS,
+            isAndroid: isAndroid,
+            viewport: {
+                width: window.innerWidth,
+                height: window.innerHeight
+            }
+        },
+        timestamp: new Date().toISOString()
+    };
+    
+    // Send analytics webhook (don't block on this)
+    fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(conversionData)
+    }).then(response => {
+        if (response.ok) {
+            console.log('✅ Analytics tracked successfully');
+        } else {
+            console.log('⚠️ Analytics tracking failed, but purchase succeeded');
+        }
+    }).catch(error => {
+        console.log('⚠️ Analytics tracking error:', error);
+    });
+    
+} catch (webhookError) {
+    console.log('⚠️ Webhook tracking failed:', webhookError);
+}
+}
+
+// Show custom purchase modal for Supabase products
+function showCustomPurchaseModal(clothing, variantToAdd) {
+// Create a simple modal for custom purchase flow
+const modal = document.createElement('div');
+modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.6);
+    z-index: 30000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+`;
+
+modal.innerHTML = `
+    <div style="
+        background: white;
+        padding: 24px;
+        border-radius: 8px;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 25px 80px rgba(0,0,0,0.2);
+        border: 1px solid #e0e0e0;
+    ">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <h3 style="
+                margin: 0 0 8px 0;
+                font-size: 18px;
+                font-weight: 700;
+                color: #333;
+            ">Purchase ${clothing.name}</h3>
+            <p style="
+                margin: 0;
+                color: #666;
+                font-size: 14px;
+            ">$${variantToAdd.price.toFixed(2)}</p>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <p style="color: #666; font-size: 14px; text-align: center;">
+                This product is managed by your store. Please contact the store owner to complete your purchase.
+            </p>
+        </div>
+        
+        <div style="display: flex; gap: 12px;">
+            <button id="closeModal" style="
+                flex: 1;
+                padding: 12px;
+                background: #f0f0f0;
+                border: 1px solid #e0e0e0;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: 600;
+                color: #666;
+            ">Close</button>
+            <button id="contactStore" style="
+                flex: 1;
+                padding: 12px;
+                background: #333;
+                color: white;
+                border: 1px solid #333;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: 600;
+            ">Contact Store</button>
+        </div>
+    </div>
+`;
+
+document.body.appendChild(modal);
+
+// Handle modal interactions
+modal.querySelector('#closeModal').onclick = () => {
+    document.body.removeChild(modal);
+};
+
+modal.querySelector('#contactStore').onclick = () => {
+    // You can customize this to open email, contact form, etc.
+    window.open('mailto:contact@store.com?subject=Purchase Inquiry: ' + clothing.name, '_blank');
+    document.body.removeChild(modal);
+};
+
+// Handle backdrop click
+modal.onclick = (e) => {
+    if (e.target === modal) {
+        document.body.removeChild(modal);
+    }
+};
 }
 
 function openImageModal(imageSrc) {
@@ -2589,8 +2841,6 @@ async function addWardrobeItemToCart(tryOnId) {
         alert('❌ Network error: ' + error.message);
     }
 }
-
-
 
 
 
