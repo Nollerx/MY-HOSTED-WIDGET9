@@ -180,18 +180,35 @@ let sampleClothing = [];
 // Load clothing data based on store configuration
 async function loadClothingData() {
     try {
-        const storeConfig = window.ELLO_STORE_CONFIG || {
-            storeId: window.ELLO_STORE_ID || 'default-store',
-            storeName: window.ELLO_STORE_NAME || 'default-name',
-            clothingPopulationType: 'shopify',
-            planName: 'STARTER'
-        };
+        // Wait for store configuration to be available
+        let storeConfig = window.ELLO_STORE_CONFIG;
+        
+        // If not available yet, wait a bit and try again
+        if (!storeConfig) {
+            console.log('⏳ Store config not ready, waiting...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            storeConfig = window.ELLO_STORE_CONFIG;
+        }
+        
+        // Final fallback if still not available
+        if (!storeConfig) {
+            storeConfig = {
+                storeId: window.ELLO_STORE_ID || 'default-store',
+                storeName: window.ELLO_STORE_NAME || 'default-name',
+                clothingPopulationType: 'supabase', // Changed default to supabase
+                planName: 'STARTER'
+            };
+            console.log('⚠️ Using fallback config:', storeConfig);
+        }
         
         console.log('🔄 Loading clothing data with configuration:', storeConfig);
+        console.log('🔄 Clothing population type:', storeConfig.clothingPopulationType);
         
         if (storeConfig.clothingPopulationType === 'supabase') {
+            console.log('🗄️ Loading from Supabase...');
             await loadClothingFromSupabase(storeConfig);
         } else {
+            console.log('🛍️ Loading from Shopify...');
             await loadClothingFromShopify(storeConfig);
         }
         
@@ -336,10 +353,14 @@ async function loadClothingFromShopify(storeConfig) {
 // Load clothing from Supabase
 async function loadClothingFromSupabase(storeConfig) {
     console.log('🗄️ Loading products from Supabase for store:', storeConfig.storeId);
+    console.log('🗄️ Store config:', storeConfig);
     
     try {
+        const url = `https://rwmvgwnebnsqcyhhurti.supabase.co/rest/v1/clothing_items?store_id=eq.${storeConfig.storeId}&active=eq.true`;
+        console.log('🗄️ Fetching from URL:', url);
+        
         // Fetch clothing items from Supabase
-        const response = await fetch(`https://rwmvgwnebnsqcyhhurti.supabase.co/rest/v1/clothing_items?store_id=eq.${storeConfig.storeId}&active=eq.true`, {
+        const response = await fetch(url, {
             headers: {
                 'apikey': SUPABASE_ANON_KEY,
                 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
@@ -347,11 +368,15 @@ async function loadClothingFromSupabase(storeConfig) {
             }
         });
 
+        console.log('🗄️ Response status:', response.status);
+        console.log('🗄️ Response ok:', response.ok);
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
+        console.log('🗄️ Raw data received:', data);
         
         if (!Array.isArray(data)) {
             throw new Error('Invalid data format received from Supabase');
@@ -361,9 +386,15 @@ async function loadClothingFromSupabase(storeConfig) {
 
         // Convert Supabase products to widget format
         const allProducts = data
-            .filter(item => item && item.name && item.image_url)
+            .filter(item => {
+                const isValid = item && item.name && item.image_url;
+                if (!isValid) {
+                    console.log('🗄️ Filtered out item:', item);
+                }
+                return isValid;
+            })
             .map(item => {
-                return {
+                const converted = {
                     id: item.item_id || item.id || `supabase_${item.name.toLowerCase().replace(/\s+/g, '_')}`,
                     name: item.name,
                     price: parseFloat(item.price || 0),
@@ -381,13 +412,24 @@ async function loadClothingFromSupabase(storeConfig) {
                         size: 'M'
                     }]
                 };
+                console.log('🗄️ Converted item:', converted);
+                return converted;
             });
 
+        console.log('🗄️ All converted products:', allProducts);
+
         // FILTER TO ONLY CLOTHING ITEMS
-        sampleClothing = allProducts.filter(product => isClothingItem(product));
+        sampleClothing = allProducts.filter(product => {
+            const isClothing = isClothingItem(product);
+            if (!isClothing) {
+                console.log('🗄️ Filtered out non-clothing item:', product.name, 'category:', product.category);
+            }
+            return isClothing;
+        });
 
         console.log(`✅ Loaded ${allProducts.length} total products from Supabase`);
         console.log(`✅ Filtered to ${sampleClothing.length} clothing items`);
+        console.log('✅ Final sampleClothing:', sampleClothing);
 
     } catch (error) {
         console.error('❌ Error loading from Supabase:', error);
