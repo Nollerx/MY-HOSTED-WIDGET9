@@ -99,13 +99,20 @@
             console.log('✅ Store configuration ready:', window.ELLO_STORE_CONFIG);
             
             // Fetch and inject HTML
-            const response = await fetch(`${WIDGET_BASE_URL}/index.html`);
+            console.log('🔄 Fetching HTML from:', `${WIDGET_BASE_URL}/index.html`);
+            const response = await fetch(`${WIDGET_BASE_URL}/index.html`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+                }
+            });
             if (!response.ok) {
+                console.error('❌ Failed to fetch HTML:', response.status, response.statusText);
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             
             const html = await response.text();
-            console.log('HTML fetched successfully');
+            console.log('✅ HTML fetched successfully');
             
             // Parse the HTML
             const parser = new DOMParser();
@@ -149,9 +156,10 @@
             console.log('HTML injected, loading script...');
             
             // Now load the script
+            console.log('🔄 Loading script from:', `${WIDGET_BASE_URL}/widget-main.js`);
             await loadScript(`${WIDGET_BASE_URL}/widget-main.js`);
             
-            console.log('Script loaded, initializing widget...');
+            console.log('✅ Script loaded, initializing widget...');
             
             // Manually trigger initialization
             if (typeof window.initializeWidget === 'function') {
