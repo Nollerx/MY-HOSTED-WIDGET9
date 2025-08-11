@@ -39,7 +39,7 @@
                     console.log('🗄️ clothing_population_type from DB:', storeConfig.clothing_population_type);
                     window.ELLO_STORE_CONFIG = {
                         storeId: storeConfig.store_id,
-                        storeName: storeConfig.store_name,
+                        storeName: storeName, // Keep the original script tag value for Shopify
                         clothingPopulationType: storeConfig.clothing_population_type || 'supabase',
                         planName: storeConfig.plan_name
                     };
