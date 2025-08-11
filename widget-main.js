@@ -272,40 +272,51 @@ async function loadClothingFromShopify(storeConfig) {
     const storeName = storeConfig.storeName || 'm8ir6h-8k';
     console.log('🛍️ Loading products from Shopify store:', storeName);
 
-    // First, let's check if we can access the Shopify store
-    const testUrl = `https://${storeName}.myshopify.com/products.json?limit=1`;
-    
-    try {
-        const testResponse = await fetch(testUrl, {
-            method: 'GET',
-            mode: 'cors',
-            headers: {
-                'Accept': 'application/json',
+    // Clean up store name - remove spaces and special characters
+    const cleanStoreName = storeName.replace(/[^a-zA-Z0-9-]/g, '').toLowerCase();
+    console.log('🛍️ Cleaned store name:', cleanStoreName);
+
+    // Try multiple approaches to access Shopify store
+    const possibleUrls = [
+        `https://${cleanStoreName}.myshopify.com/products.json`,
+        `https://${storeName.replace(/\s+/g, '-')}.myshopify.com/products.json`,
+        `https://${storeName.replace(/\s+/g, '')}.myshopify.com/products.json`
+    ];
+
+    let successfulResponse = null;
+    let lastError = null;
+
+    for (const url of possibleUrls) {
+        try {
+            console.log('🛍️ Trying URL:', url);
+            
+            // Try without CORS first (JSONP-like approach)
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                }
+            });
+            
+            if (response.ok) {
+                successfulResponse = response;
+                console.log('🛍️ Successfully connected to:', url);
+                break;
+            } else {
+                console.log('🛍️ Failed with status:', response.status, 'for URL:', url);
             }
-        });
-        
-        if (!testResponse.ok) {
-            throw new Error(`Shopify store not accessible: ${testResponse.status}`);
+        } catch (error) {
+            console.log('🛍️ Error trying URL:', url, error.message);
+            lastError = error;
         }
-    } catch (corsError) {
-        console.warn('CORS issue detected, trying alternative method...');
-        throw new Error('CORS restriction on Shopify store');
     }
 
-    // If test passed, load all products
-    const response = await fetchWithRetry(`https://${storeName}.myshopify.com/products.json?limit=250`, {
-        method: 'GET',
-        mode: 'cors',
-        headers: {
-            'Accept': 'application/json',
-        }
-    });
-
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    if (!successfulResponse) {
+        console.error('❌ All Shopify URLs failed. Last error:', lastError);
+        throw new Error(`Unable to access Shopify store: ${storeName}. Please check the store name and ensure the store is accessible.`);
     }
 
-    const data = await response.json();
+    const data = await successfulResponse.json();
     
     if (!data.products || !Array.isArray(data.products)) {
         throw new Error('Invalid data format received from Shopify');
@@ -328,7 +339,7 @@ async function loadClothingFromShopify(storeConfig) {
                 tags: product.tags || [],
                 color: getColorFromProduct(product),
                 image_url: firstImage.src || '',
-                product_url: `https://${storeName}.myshopify.com/products/${product.handle}`,
+                product_url: `https://${cleanStoreName}.myshopify.com/products/${product.handle}`,
                 shopify_product_id: product.id,
                 data_source: 'shopify',
                 variants: (product.variants || []).map(variant => ({
