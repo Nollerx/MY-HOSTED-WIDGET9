@@ -32,8 +32,11 @@
                 }
             })
             .then(function(data) {
+                console.log('🗄️ Raw store data from Supabase:', data);
                 if (data && data.length > 0) {
                     var storeConfig = data[0];
+                    console.log('🗄️ Individual store config:', storeConfig);
+                    console.log('🗄️ clothing_population_type from DB:', storeConfig.clothing_population_type);
                     window.ELLO_STORE_CONFIG = {
                         storeId: storeConfig.store_id,
                         storeName: storeConfig.store_name,
@@ -49,7 +52,7 @@
                         clothingPopulationType: 'supabase',
                         planName: 'STARTER'
                     };
-                    console.log('⚠️ Store not found, using default configuration');
+                    console.log('⚠️ Store not found in Supabase, using default configuration:', window.ELLO_STORE_CONFIG);
                 }
                 resolve(window.ELLO_STORE_CONFIG);
             })
@@ -62,6 +65,7 @@
                     clothingPopulationType: 'supabase',
                     planName: 'STARTER'
                 };
+                console.log('⚠️ Error occurred, using fallback configuration:', window.ELLO_STORE_CONFIG);
                 resolve(window.ELLO_STORE_CONFIG);
             });
         }
