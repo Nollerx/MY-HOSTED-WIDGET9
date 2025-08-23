@@ -908,8 +908,6 @@ console.log('📦 Using variety-based featured item:', featuredItem.name);
 
 // Get data source info
 const storeConfig = window.ELLO_STORE_CONFIG || {};
-const dataSourceIcon = storeConfig.clothingPopulationType === 'supabase' ? '🗄️' : '🛍️';
-const dataSourceText = storeConfig.clothingPopulationType === 'supabase' ? 'Custom' : 'Shopify';
 
 // Populate featured item section
 const featuredContainer = document.getElementById('featuredItem');
@@ -922,9 +920,6 @@ featuredContainer.innerHTML = `
         <div class="featured-name">${featuredItem.name}</div>
         <div class="featured-price">$${featuredItem.price.toFixed(2)}</div>
         <div class="featured-badge">${badgeText}</div>
-        <div class="featured-source" style="font-size: 10px; color: #666; margin-top: 4px;">
-            ${dataSourceIcon} ${dataSourceText}
-        </div>
     </div>
 </div>
 `;
@@ -935,17 +930,11 @@ const quickPicksGrid = document.getElementById('quickPicksGrid');
 
 let quickPicksHTML = '';
 quickPicks.forEach(item => {
-const itemDataSourceIcon = item.data_source === 'supabase' ? '🗄️' : '🛍️';
-const itemDataSourceText = item.data_source === 'supabase' ? 'Custom' : 'Shopify';
-
 quickPicksHTML += `
     <div class="quick-pick-item" onclick="selectClothing('${item.id}')">
         <img src="${item.image_url}" alt="${item.name}" class="quick-pick-image">
         <div class="quick-pick-name">${item.name}</div>
         <div class="quick-pick-price">$${item.price.toFixed(2)}</div>
-        <div class="quick-pick-source" style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.7); color: white; padding: 2px 4px; border-radius: 2px; font-size: 8px; z-index: 2;">
-            ${itemDataSourceIcon}
-        </div>
     </div>
 `;
 });
