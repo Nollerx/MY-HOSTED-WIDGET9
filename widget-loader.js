@@ -1,7 +1,7 @@
 (function () {
     console.log('Widget loader starting...');
     
-    const WIDGET_BASE_URL = "https://nollerx.github.io/MY-HOSTED-WIDGET9";
+    const WIDGET_BASE_URL = "https://nollerx.github.io/ELLO_SOFTWARE_WIDGET";
     
     // Get store configuration from script tag
     const currentScript = document.currentScript;
@@ -175,3 +175,4 @@
     // Start the initialization process
     initializeWidget();
 })();
+
