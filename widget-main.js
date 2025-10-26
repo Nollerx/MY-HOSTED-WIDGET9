@@ -591,6 +591,7 @@ let tryonChatHistory = [];
 let generalChatHistory = [];
 let currentTryOnId = null;
 let currentFeaturedItem = null;
+let isTryOnProcessing = false; // Track if try-on is currently processing
 
 function detectDevice() {
     const userAgent = navigator.userAgent.toLowerCase();
@@ -979,6 +980,9 @@ function resetSelection() {
     userPhoto = null;
     userPhotoFileId = null;
     
+    // Clear processing state
+    isTryOnProcessing = false;
+    
     // Clear all selections
     document.querySelectorAll('.featured-item, .quick-pick-item').forEach(item => {
         item.classList.remove('selected');
@@ -1008,7 +1012,17 @@ function resetSelection() {
 
 function updateTryOnButton() {
     const btn = document.getElementById('tryOnBtn');
-    btn.disabled = !(userPhoto && selectedClothing);
+    // Button is disabled if processing OR if missing required data
+    btn.disabled = isTryOnProcessing || !(userPhoto && selectedClothing);
+    
+    // Update button text and styling based on processing state
+    if (isTryOnProcessing) {
+        btn.innerHTML = '<span>⏳</span>Processing...';
+        btn.classList.add('processing');
+    } else {
+        btn.innerHTML = '<span>✨</span>Try On';
+        btn.classList.remove('processing');
+    }
 }
 
 function loadChatHistory() {
@@ -1464,6 +1478,16 @@ alert("Please upload a photo and select clothing first!");
 return;
 }
 
+// Prevent multiple simultaneous requests
+if (isTryOnProcessing) {
+console.log('Try-on already in progress, ignoring request');
+return;
+}
+
+// Set processing state and update button
+isTryOnProcessing = true;
+updateTryOnButton();
+
 // Generate unique try-on ID for this attempt
 currentTryOnId = generateTryOnId();
 console.log('Generated tryOnId:', currentTryOnId);
@@ -1567,6 +1591,10 @@ resultSection.innerHTML = `
     `;
 }
 
+// Clear processing state and re-enable button for success cases
+isTryOnProcessing = false;
+updateTryOnButton();
+
 } catch (error) {
 console.error('Webhook error:', error);
 
@@ -1590,6 +1618,10 @@ resultSection.innerHTML = `
         <small style="color: #e74c3c;">Network issue - showing demo result</small>
     </div>
 `;
+} finally {
+    // Always clear processing state and re-enable button
+    isTryOnProcessing = false;
+    updateTryOnButton();
 }
 }
 
