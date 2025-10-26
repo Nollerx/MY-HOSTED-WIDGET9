@@ -1570,23 +1570,29 @@ resultSection.innerHTML = `
     // Auto-save to wardrobe
     autoSaveToWardrobe(clothing, result.result_image_url, currentTryOnId);
 } else {
-    // FALLBACK CASE - Pass tryOnId as parameter
-    const placeholderUrl = 'https://via.placeholder.com/300x400?text=Try-On+Result';
+    // FALLBACK CASE - Server responded but no result image
     resultSection.innerHTML = `
-        <div class="result-container">
-            <h4>Your Virtual Try-On Result</h4>
-            <img src="${placeholderUrl}" alt="Try-on result" class="result-image" onclick="openImageModal('${placeholderUrl}')">
-            <p>How do you like the ${clothing.name}?</p>
-            <div class="buy-now-container">
-                <button class="buy-now-btn" onclick="handleBuyNow('${clothing.id}', '${placeholderUrl}', '${currentTryOnId}')">
-                    <div class="loading-spinner"></div>
-                    <span class="btn-text">
-                        <span class="cart-icon">🛒</span>
-                        Add to Cart - $${clothing.price.toFixed(2)}
-                    </span>
+        <div class="processing-container">
+            <div class="processing-icon">⏳</div>
+            <h4>Processing Your Try-On</h4>
+            <p>Your virtual try-on request has been submitted successfully!</p>
+            <div class="processing-details">
+                <p><strong>What's happening?</strong></p>
+                <p>Our AI is working on generating your personalized try-on result. This usually takes 30-60 seconds.</p>
+            </div>
+            <div class="processing-actions">
+                <button class="btn btn-secondary" onclick="retryTryOn()">
+                    <span>🔄</span>
+                    Check Again
+                </button>
+                <button class="btn btn-primary" onclick="handleBuyNow('${clothing.id}', '', '${currentTryOnId}')">
+                    <span>🛒</span>
+                    Add to Cart - $${clothing.price.toFixed(2)}
                 </button>
             </div>
-            <small style="color: #64748b;">Processing completed - result may take a moment to generate</small>
+            <div class="processing-help">
+                <p><strong>Tip:</strong> You can still add this item to your cart while we process your try-on!</p>
+            </div>
         </div>
     `;
 }
@@ -1598,24 +1604,31 @@ updateTryOnButton();
 } catch (error) {
 console.error('Webhook error:', error);
 
-// ERROR CASE - Pass tryOnId as parameter
+// ERROR CASE - Show proper error state
 const clothing = sampleClothing.find(item => item.id === selectedClothing);
-const placeholderUrl = 'https://via.placeholder.com/300x400?text=Try-On+Result';
 resultSection.innerHTML = `
-    <div class="result-container">
-        <h4>Virtual Try-On Result</h4>
-        <img src="${placeholderUrl}" alt="Try-on result" class="result-image" onclick="openImageModal('${placeholderUrl}')">
-        <p>How do you like the ${clothing.name}?</p>
-        <div class="buy-now-container">
-            <button class="buy-now-btn" onclick="handleBuyNow('${clothing.id}', '${placeholderUrl}', '${currentTryOnId}')">
-                <div class="loading-spinner"></div>
-                <span class="btn-text">
-                    <span class="cart-icon">🛒</span>
-                    Add to Cart - $${clothing.price.toFixed(2)}
-                </span>
+    <div class="error-container">
+        <div class="error-icon">⚠️</div>
+        <h4>Try-On Failed</h4>
+        <p>We encountered an issue processing your virtual try-on request.</p>
+        <div class="error-details">
+            <p><strong>What happened?</strong></p>
+            <p>There was a network connectivity issue that prevented us from generating your virtual try-on result.</p>
+        </div>
+        <div class="error-actions">
+            <button class="btn btn-secondary" onclick="retryTryOn()">
+                <span>🔄</span>
+                Try Again
+            </button>
+            <button class="btn btn-primary" onclick="handleBuyNow('${clothing.id}', '', '${currentTryOnId}')">
+                <span>🛒</span>
+                Add to Cart - $${clothing.price.toFixed(2)}
             </button>
         </div>
-        <small style="color: #e74c3c;">Network issue - showing demo result</small>
+        <div class="error-help">
+            <p><strong>Need help?</strong></p>
+            <p>If this issue persists, try refreshing the page or contact support.</p>
+        </div>
     </div>
 `;
 } finally {
@@ -1623,6 +1636,12 @@ resultSection.innerHTML = `
     isTryOnProcessing = false;
     updateTryOnButton();
 }
+}
+
+// Retry try-on function for error handling
+function retryTryOn() {
+    console.log('Retrying try-on request...');
+    startTryOn();
 }
 
 // Improved Size Selector Function
