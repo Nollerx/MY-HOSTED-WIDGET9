@@ -78,27 +78,76 @@ const WIDGET_CONFIG = {
     RETRY_DELAY: 1000
 };
 
-// Clothing Categories Configuration
+// Improved Clothing Categories Configuration
 const CLOTHING_CATEGORIES = {
-    // Allowed categories (lowercase)
-    allowed: [
-        'clothing', 'apparel', 'dress', 'dresses', 'shirt', 'shirts', 
-        'top', 'tops', 'blouse', 'blouses', 't-shirt', 't-shirts',
-        'sweater', 'sweaters', 'jacket', 'jackets', 'coat', 'coats',
-        'pants', 'trousers', 'jeans', 'shorts', 'skirt', 'skirts',
-        'suit', 'suits', 'romper', 'rompers', 'jumpsuit', 'jumpsuits',
-        'cardigan', 'cardigans', 'hoodie', 'hoodies', 'sweatshirt',
-        'vest', 'vests', 'blazer', 'blazers', 'tank', 'tanks',
-        'bodysuit', 'bodysuits', 'leggings', 'tights', 'kimono',
-        'tunic', 'tunics', 'poncho', 'ponchos', 'cape', 'capes'
+    // Comprehensive clothing terms (more inclusive)
+    clothingTerms: [
+        // Tops
+        'shirt', 'shirts', 'blouse', 'blouses', 't-shirt', 't-shirts', 'tshirt', 'tshirts',
+        'top', 'tops', 'tank', 'tanks', 'tank-top', 'tank-tops', 'camisole', 'camisoles',
+        'sweater', 'sweaters', 'pullover', 'pullovers', 'hoodie', 'hoodies', 'sweatshirt', 'sweatshirts',
+        'cardigan', 'cardigans', 'vest', 'vests', 'waistcoat', 'waistcoats',
+        'blazer', 'blazers', 'suit-jacket', 'suit-jackets', 'sport-shirt', 'sport-shirts',
+        
+        // Bottoms
+        'pants', 'trousers', 'jeans', 'denim', 'shorts', 'short-pants', 'capri', 'capris',
+        'skirt', 'skirts', 'mini-skirt', 'maxi-skirt', 'midi-skirt', 'pencil-skirt',
+        'leggings', 'tights', 'yoga-pants', 'joggers', 'sweatpants', 'track-pants',
+        
+        // Dresses & One-pieces
+        'dress', 'dresses', 'gown', 'gowns', 'maxi-dress', 'mini-dress', 'midi-dress',
+        'romper', 'rompers', 'jumpsuit', 'jumpsuits', 'overall', 'overalls', 'dungarees',
+        'bodysuit', 'bodysuits', 'unitard', 'unitards',
+        
+        // Outerwear
+        'jacket', 'jackets', 'coat', 'coats', 'blazer', 'blazers', 'suit', 'suits',
+        'cardigan', 'cardigans', 'sweater', 'sweaters', 'pullover', 'pullovers',
+        'hoodie', 'hoodies', 'windbreaker', 'windbreakers', 'bomber', 'bombers',
+        'trench-coat', 'trench-coats', 'pea-coat', 'pea-coats', 'parka', 'parkas',
+        
+        // Specialized clothing
+        'kimono', 'kimonos', 'tunic', 'tunics', 'poncho', 'ponchos', 'cape', 'capes',
+        'robe', 'robes', 'bathrobe', 'bathrobes', 'dressing-gown', 'dressing-gowns',
+        'nightgown', 'nightgowns', 'pajamas', 'pyjamas', 'sleepwear', 'loungewear',
+        'activewear', 'athletic-wear', 'sportswear', 'workout-clothes', 'gym-clothes',
+        'swimwear', 'bikini', 'bikinis', 'swimsuit', 'swimsuits', 'bathing-suit',
+        
+        // General terms
+        'clothing', 'apparel', 'garment', 'garments', 'attire', 'outfit', 'outfits',
+        'wear', 'fashion', 'style', 'clothes', 'clothing-item'
     ],
-    // Explicitly excluded categories
-    excluded: [
-        'shoes', 'footwear', 'boots', 'sandals', 'sneakers', 'heels',
-        'accessories', 'jewelry', 'jewellery', 'bags', 'purse', 'wallet',
-        'hat', 'hats', 'cap', 'caps', 'sunglasses', 'glasses', 'watch',
-        'belt', 'belts', 'scarf', 'scarves', 'gloves', 'socks',
-        'underwear', 'lingerie', 'bra', 'panties', 'boxers', 'briefs'
+    
+    // Only exclude items that are DEFINITELY not clothing (more specific)
+    excludedPatterns: [
+        // Footwear (only when it's clearly footwear)
+        /^(shoes?|boots?|sandals?|sneakers?|heels?|flats?|loafers?|oxfords?|pumps?|stilettos?|wedges?|clogs?|mules?|slides?|flip-flops?)$/i,
+        /(running-shoes?|walking-shoes?|dress-shoes?|tennis-shoes?|basketball-shoes?|soccer-shoes?|hiking-boots?|work-boots?|combat-boots?)$/i,
+        
+        // Accessories (only when clearly accessories)
+        /^(jewelry|jewellery|necklace|bracelet|earrings?|ring|rings|pendant|brooch|pin|pins)$/i,
+        /^(bags?|purse|purses|wallet|wallets|handbag|handbags|backpack|backpacks|tote|totes)$/i,
+        /^(hat|hats?|cap|caps?|beanie|beanies|fedora|fedoras|baseball-cap)$/i,
+        /^(sunglasses?|glasses?|eyewear|watch|watches?|timepiece)$/i,
+        /^(belt|belts?|scarf|scarves?|gloves?|mittens?)$/i,
+        
+        // Underwear (only intimate wear)
+        /^(underwear|lingerie|bra|bras?|panties?|boxers?|briefs?|thong|thongs?|g-string)$/i,
+        /^(undershirt|undershirts?|undershirt|undershirts?|camisole|camisoles?)$/i,
+        
+        // Socks (only socks)
+        /^(socks?|stockings?|hosiery|pantyhose|tights?)$/i,
+        
+        // Non-clothing items
+        /^(perfume|fragrance|cosmetics?|makeup|skincare|beauty-products?)$/i,
+        /^(books?|magazines?|electronics?|phones?|laptops?|tablets?)$/i,
+        /^(furniture|home-decor|kitchen-items?|bathroom-items?)$/i
+    ],
+    
+    // Categories that are ALWAYS clothing (fast track)
+    alwaysClothing: [
+        'tops', 'bottoms', 'dresses', 'outerwear', 'activewear', 'sleepwear', 
+        'swimwear', 'formal-wear', 'casual-wear', 'work-wear', 'maternity-wear',
+        'plus-size', 'petite', 'tall', 'junior', 'mens', 'womens', 'unisex'
     ]
 };
 
@@ -108,44 +157,65 @@ const CLOTHING_CATEGORIES = {
 
 // ADD THESE FUNCTIONS HERE (BEFORE loadClothingData):
 
-// Check if a product is a clothing item
+// Improved clothing detection function - more accurate and less aggressive
 function isClothingItem(product) {
-    // Convert to lowercase for comparison
-    const productType = (product.category || '').toLowerCase();
-    const productName = (product.name || '').toLowerCase();
-    const productTags = (product.tags || []).map(tag => tag.toLowerCase());
+    const productType = (product.category || '').toLowerCase().trim();
+    const productName = (product.name || '').toLowerCase().trim();
+    const productTags = (product.tags || []).map(tag => tag.toLowerCase().trim());
     
-    // Check if explicitly excluded
-    for (const excluded of CLOTHING_CATEGORIES.excluded) {
-        if (productType.includes(excluded) || 
-            productName.includes(excluded) ||
-            productTags.some(tag => tag.includes(excluded))) {
-            console.log(`❌ Excluded: ${product.name} (matched: ${excluded})`);
+    // 1. FAST TRACK: Check if category is definitely clothing
+    if (CLOTHING_CATEGORIES.alwaysClothing.some(category => 
+        productType.includes(category) || 
+        productTags.some(tag => tag.includes(category)))) {
+        console.log(`✅ Fast track clothing: ${product.name} (category: ${productType})`);
+        return true;
+    }
+    
+    // 2. EXCLUSION CHECK: Only exclude items that are DEFINITELY not clothing
+    // Use regex patterns for more precise matching
+    const fullText = `${productType} ${productName} ${productTags.join(' ')}`;
+    
+    for (const pattern of CLOTHING_CATEGORIES.excludedPatterns) {
+        if (pattern.test(fullText)) {
+            console.log(`❌ Excluded: ${product.name} (matched pattern: ${pattern})`);
             return false;
         }
     }
     
-    // Check if in allowed categories
-    for (const allowed of CLOTHING_CATEGORIES.allowed) {
-        if (productType.includes(allowed) || 
-            productName.includes(allowed) ||
-            productTags.some(tag => tag.includes(allowed))) {
+    // 3. INCLUSION CHECK: Look for clothing terms (more comprehensive)
+    for (const clothingTerm of CLOTHING_CATEGORIES.clothingTerms) {
+        if (productType.includes(clothingTerm) || 
+            productName.includes(clothingTerm) ||
+            productTags.some(tag => tag.includes(clothingTerm))) {
+            console.log(`✅ Clothing term match: ${product.name} (term: ${clothingTerm})`);
             return true;
         }
     }
     
-    // Additional smart checks
+    // 4. SIZE-BASED DETECTION: Check for clothing sizes
     if (hasClothingSizeVariants(product)) {
+        console.log(`✅ Size-based clothing: ${product.name}`);
         return true;
     }
     
-    // If product type is empty or generic, check the name
+    // 5. SMART NAME ANALYSIS: For products with generic categories
     if (!productType || productType === 'product' || productType === '') {
-        return isLikelyClothingByName(productName);
+        if (isLikelyClothingByName(productName)) {
+            console.log(`✅ Name-based clothing: ${product.name}`);
+            return true;
+        }
     }
     
-    console.log(`⚠️ Uncertain item excluded: ${product.name} (type: ${productType})`);
-    return false;
+    // 6. CONTEXTUAL ANALYSIS: Check for clothing-related context
+    if (hasClothingContext(product)) {
+        console.log(`✅ Context-based clothing: ${product.name}`);
+        return true;
+    }
+    
+    // 7. DEFAULT: If uncertain, be more inclusive (changed from false to true)
+    // Only exclude if we're very confident it's not clothing
+    console.log(`⚠️ Uncertain item - defaulting to INCLUDE: ${product.name} (type: ${productType})`);
+    return true; // Changed from false to true - be more inclusive
 }
 
 // Check if product has clothing-style size variants
@@ -166,11 +236,67 @@ function hasClothingSizeVariants(product) {
     return false;
 }
 
-// Check if product name suggests it's clothing
+// Enhanced function to detect clothing by name patterns
 function isLikelyClothingByName(name) {
-    // Check if the product name contains clothing-related terms
-    const clothingTerms = ['wear', 'outfit', 'garment', 'attire', 'apparel'];
-    return clothingTerms.some(term => name.includes(term));
+    // More comprehensive clothing indicators in names
+    const clothingIndicators = [
+        'wear', 'outfit', 'garment', 'attire', 'apparel', 'clothing', 'fashion',
+        'style', 'look', 'ensemble', 'getup', 'costume', 'uniform', 'dress-up',
+        'casual', 'formal', 'business', 'party', 'evening', 'daytime', 'work',
+        'weekend', 'vacation', 'travel', 'date', 'wedding', 'cocktail', 'office'
+    ];
+    
+    return clothingIndicators.some(indicator => name.includes(indicator));
+}
+
+// New function: Check for clothing-related context clues
+function hasClothingContext(product) {
+    const productName = (product.name || '').toLowerCase();
+    const productTags = (product.tags || []).map(tag => tag.toLowerCase());
+    const productType = (product.category || '').toLowerCase();
+    
+    // Check for clothing-related context clues
+    const contextClues = [
+        // Size indicators
+        'size', 'sizing', 'fit', 'fitting', 'measurement', 'measurements',
+        
+        // Material indicators (common in clothing)
+        'cotton', 'polyester', 'wool', 'silk', 'linen', 'denim', 'leather', 'suede',
+        'cashmere', 'merino', 'spandex', 'elastane', 'viscose', 'rayon', 'modal',
+        
+        // Style indicators
+        'vintage', 'retro', 'modern', 'classic', 'contemporary', 'trendy', 'stylish',
+        'designer', 'brand', 'label', 'collection', 'line', 'series',
+        
+        // Occasion indicators
+        'casual', 'formal', 'business', 'party', 'evening', 'daytime', 'work',
+        'weekend', 'vacation', 'travel', 'date', 'wedding', 'cocktail', 'office',
+        
+        // Gender/size indicators
+        'mens', 'womens', 'unisex', 'plus-size', 'petite', 'tall', 'junior',
+        'maternity', 'pregnancy', 'nursing', 'postpartum'
+    ];
+    
+    const fullText = `${productName} ${productTags.join(' ')} ${productType}`;
+    
+    // If it has multiple context clues, it's likely clothing
+    const clueCount = contextClues.filter(clue => fullText.includes(clue)).length;
+    
+    if (clueCount >= 2) {
+        console.log(`✅ Context clues found: ${clueCount} clues for ${product.name}`);
+        return true;
+    }
+    
+    // Check for specific clothing patterns
+    const clothingPatterns = [
+        /\b(shirt|dress|pants?|jacket|coat|sweater|hoodie|blouse|tank|vest|blazer|cardigan|romper|jumpsuit|leggings|tights|kimono|tunic|poncho|cape)\b/i,
+        /\b(top|bottom|outerwear|activewear|sleepwear|swimwear|loungewear)\b/i,
+        /\b(short-sleeve|long-sleeve|sleeveless|off-shoulder|halter|strapless)\b/i,
+        /\b(high-waist|low-waist|mid-rise|skinny|straight|wide-leg|cropped)\b/i,
+        /\b(maxi|mini|midi|pencil|a-line|wrap|shift|bodycon)\b/i
+    ];
+    
+    return clothingPatterns.some(pattern => pattern.test(fullText));
 }
 
 // Dynamic clothing data from Supabase
