@@ -1728,14 +1728,21 @@ function updateBrowserDisplay() {
         grid.style.display = 'grid';
         noResults.style.display = 'none';
         
-        // Calculate pagination
-        const totalPages = Math.ceil(filteredClothing.length / browserItemsPerPage);
+        // Filter out items without images
+        const itemsWithImages = filteredClothing.filter(item => {
+            return item && item.image_url && item.image_url.trim() !== '' && 
+                   !item.image_url.includes('placeholder') && 
+                   !item.image_url.includes('data:image/svg');
+        });
+        
+        // Calculate pagination with filtered items
+        const totalPages = Math.ceil(itemsWithImages.length / browserItemsPerPage);
         const startIndex = (browserCurrentPage - 1) * browserItemsPerPage;
         const endIndex = startIndex + browserItemsPerPage;
-        const itemsForCurrentPage = filteredClothing.slice(startIndex, endIndex);
+        const itemsForCurrentPage = itemsWithImages.slice(startIndex, endIndex);
         
         // Update results count
-        resultsCount.textContent = `Showing ${startIndex + 1}-${Math.min(endIndex, filteredClothing.length)} of ${filteredClothing.length} items`;
+        resultsCount.textContent = `Showing ${startIndex + 1}-${Math.min(endIndex, itemsWithImages.length)} of ${itemsWithImages.length} items`;
         
         // Render only items for current page
         itemsForCurrentPage.forEach(item => {
