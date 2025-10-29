@@ -869,6 +869,8 @@ let generalChatHistory = [];
 let currentTryOnId = null;
 let currentFeaturedItem = null;
 let isTryOnProcessing = false; // Track if try-on is currently processing
+let browserCurrentPage = 1; // Current page in browser
+let browserItemsPerPage = 24; // Items per page (6 columns x 4 rows)
 
 function detectDevice() {
     const userAgent = navigator.userAgent.toLowerCase();
@@ -1623,6 +1625,10 @@ function openClothingBrowser() {
     backdrop.classList.add('active');
     document.body.style.overflow = 'hidden';
     
+    // Reset pagination
+    browserCurrentPage = 1;
+    filteredClothing = [...sampleClothing];
+    
     console.log('Opening clothing browser, sampleClothing length:', sampleClothing.length);
     renderBrowserGrid();
 }
@@ -1656,30 +1662,19 @@ function renderBrowserGrid() {
         grid.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;">Loading products...</div>';
         loadClothingData().then(() => {
             console.log('Data loaded, re-rendering grid...');
+            filteredClothing = [...sampleClothing];
             renderBrowserGrid();
         });
         return;
     }
     
-    console.log('Rendering grid with', sampleClothing.length, 'items');
-    let gridHTML = '';
-    sampleClothing.forEach((item, index) => {
-        const isSelected = selectedClothing === item.id;
-        const selectedClass = isSelected ? 'selected' : '';
-        
-        console.log(`Item ${index}:`, item.name, 'Image:', item.image_url);
-        
-        gridHTML += `
-            <div class="browser-clothing-card ${selectedClass}" onclick="selectClothingFromBrowser('${item.id}')">
-                <img src="${item.image_url}" alt="${item.name}" loading="lazy">
-                <div class="browser-card-name">${item.name}</div>
-            </div>
-        `;
-    });
+    // Reset filtered clothing if needed
+    if (filteredClothing.length === 0 || filteredClothing.length === sampleClothing.length) {
+        filteredClothing = [...sampleClothing];
+    }
     
-    grid.innerHTML = gridHTML;
-    console.log('Grid HTML set, length:', gridHTML.length);
-    console.log('Grid display style:', grid.style.display);
+    // Use updateBrowserDisplay to handle pagination
+    updateBrowserDisplay();
 }
 
 function selectClothingFromBrowser(clothingId) {
@@ -1698,6 +1693,9 @@ function selectClothingFromBrowser(clothingId) {
 
 function handleBrowserSearch() {
     const searchTerm = document.getElementById('browserSearch').value.toLowerCase().trim();
+    
+    // Reset to page 1 when searching
+    browserCurrentPage = 1;
     
     if (searchTerm === '') {
         filteredClothing = [...sampleClothing];
@@ -1725,12 +1723,22 @@ function updateBrowserDisplay() {
         grid.style.display = 'none';
         noResults.style.display = 'block';
         resultsCount.textContent = '';
+        updatePaginationControls(0);
     } else {
         grid.style.display = 'grid';
         noResults.style.display = 'none';
-        resultsCount.textContent = `${filteredClothing.length} item${filteredClothing.length !== 1 ? 's' : ''} found`;
         
-        filteredClothing.forEach(item => {
+        // Calculate pagination
+        const totalPages = Math.ceil(filteredClothing.length / browserItemsPerPage);
+        const startIndex = (browserCurrentPage - 1) * browserItemsPerPage;
+        const endIndex = startIndex + browserItemsPerPage;
+        const itemsForCurrentPage = filteredClothing.slice(startIndex, endIndex);
+        
+        // Update results count
+        resultsCount.textContent = `Showing ${startIndex + 1}-${Math.min(endIndex, filteredClothing.length)} of ${filteredClothing.length} items`;
+        
+        // Render only items for current page
+        itemsForCurrentPage.forEach(item => {
             const isSelected = selectedClothing === item.id;
             const selectedClass = isSelected ? 'selected' : '';
             
@@ -1745,7 +1753,102 @@ function updateBrowserDisplay() {
             
             grid.appendChild(cardElement);
         });
+        
+    // Update pagination controls
+    updatePaginationControls(totalPages);
     }
+}
+
+// Pagination navigation functions
+function goToBrowserPage(page) {
+    const totalPages = Math.ceil(filteredClothing.length / browserItemsPerPage);
+    
+    if (page < 1) page = 1;
+    if (page > totalPages) page = totalPages;
+    
+    browserCurrentPage = page;
+    updateBrowserDisplay();
+    
+    // Scroll to top of grid
+    const grid = document.getElementById('browserGrid');
+    if (grid) {
+        grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function nextBrowserPage() {
+    const totalPages = Math.ceil(filteredClothing.length / browserItemsPerPage);
+    if (browserCurrentPage < totalPages) {
+        goToBrowserPage(browserCurrentPage + 1);
+    }
+}
+
+function prevBrowserPage() {
+    if (browserCurrentPage > 1) {
+        goToBrowserPage(browserCurrentPage - 1);
+    }
+}
+
+function updatePaginationControls(totalPages) {
+    const paginationContainer = document.getElementById('browserPagination');
+    if (!paginationContainer) return;
+    
+    if (totalPages <= 1) {
+        paginationContainer.style.display = 'none';
+        return;
+    }
+    
+    paginationContainer.style.display = 'flex';
+    
+    // Build pagination HTML
+    let paginationHTML = '';
+    
+    // Previous button
+    paginationHTML += `
+        <button class="pagination-btn" onclick="prevBrowserPage()" ${browserCurrentPage === 1 ? 'disabled' : ''}>
+            ← Previous
+        </button>
+    `;
+    
+    // Page numbers
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, browserCurrentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    if (endPage - startPage < maxVisiblePages - 1) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    if (startPage > 1) {
+        paginationHTML += `<button class="pagination-btn" onclick="goToBrowserPage(1)">1</button>`;
+        if (startPage > 2) {
+            paginationHTML += `<span class="pagination-ellipsis">...</span>`;
+        }
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        paginationHTML += `
+            <button class="pagination-btn ${i === browserCurrentPage ? 'active' : ''}" onclick="goToBrowserPage(${i})">
+                ${i}
+            </button>
+        `;
+    }
+    
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            paginationHTML += `<span class="pagination-ellipsis">...</span>`;
+        }
+        paginationHTML += `<button class="pagination-btn" onclick="goToBrowserPage(${totalPages})">${totalPages}</button>`;
+    }
+    
+    // Next button
+    paginationHTML += `
+        <button class="pagination-btn" onclick="nextBrowserPage()" ${browserCurrentPage === totalPages ? 'disabled' : ''}>
+            Next →
+        </button>
+    `;
+    
+    paginationContainer.innerHTML = paginationHTML;
 }
 
 // Fixed startTryOn function - always pass tryOnId as parameter
