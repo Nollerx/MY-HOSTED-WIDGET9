@@ -2650,7 +2650,7 @@ body {
 
 .browser-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 16px;
     min-height: 200px;
 }
@@ -2664,7 +2664,7 @@ body {
     }
     
     .browser-clothing-card {
-        min-height: 240px;
+        min-height: auto;
     }
 }
 
@@ -2677,7 +2677,7 @@ body {
     }
     
     .browser-clothing-card {
-        min-height: 220px;
+        min-height: auto;
     }
 }
 
@@ -2690,7 +2690,7 @@ body {
     }
     
     .browser-clothing-card {
-        min-height: 200px;
+        min-height: auto;
     }
 }
 
@@ -2705,31 +2705,24 @@ body {
     -webkit-tap-highlight-color: transparent;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
     width: 100%;
-    min-height: 280px;
     position: relative;
     overflow: hidden;
+    /* Keep every tile consistent */
+    aspect-ratio: 3 / 4;
 }
 
 .browser-clothing-card::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 60px;
-    background: linear-gradient(transparent, rgba(0,0,0,0.7));
-    z-index: 1;
-    pointer-events: none;
+    /* Disable heavy gradient overlay to prevent banding visuals */
+    content: none;
 }
 
 /* Mobile-specific browser card adjustments - perfect 2-column layout */
 @media (max-width: 768px) {
     .browser-clothing-card {
-        padding: 10px 6px;
-        border-radius: 6px;
-        min-height: 180px;
+        padding: 0;
+        border-radius: 8px;
         max-width: none;
         width: 100%;
     }
@@ -2737,18 +2730,18 @@ body {
 
 @media (max-width: 480px) {
     .browser-clothing-card {
-        padding: 8px 4px;
+        padding: 0;
         border-radius: 6px;
-        min-height: 170px;
+        max-width: none;
         width: 100%;
     }
 }
 
 @media (max-width: 320px) {
     .browser-clothing-card {
-        padding: 6px 3px;
+        padding: 0;
         border-radius: 4px;
-        min-height: 160px;
+        max-width: none;
         width: 100%;
     }
 }
@@ -2774,12 +2767,9 @@ body {
 .browser-clothing-card img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    position: absolute;
-    top: 0;
-    left: 0;
+    object-fit: cover; /* fill tile nicely */
+    position: static; /* avoid absolute overlapping */
     z-index: 1;
-    min-height: 100%;
 }
 
 
@@ -2855,18 +2845,11 @@ body {
 .browser-card-name {
     font-size: 12px;
     font-weight: 600;
-    color: white;
-    margin-bottom: 4px;
+    color: #333;
+    margin: 6px 8px 8px 8px;
     line-height: 1.3;
-    position: absolute;
-    bottom: 8px;
-    left: 8px;
-    right: 8px;
+    position: static; /* place below image */
     z-index: 3;
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
 }
 
 
