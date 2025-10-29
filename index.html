@@ -2651,8 +2651,17 @@ body {
 .browser-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 16px;
+    gap: 20px;
     min-height: 200px;
+    margin-bottom: 30px;
+}
+
+/* Improve spacing on larger screens */
+@media (min-width: 1024px) {
+    .browser-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 24px;
+    }
 }
 
 /* Force exactly 2 columns on mobile for clothing browser */
@@ -2891,6 +2900,74 @@ body {
     
     .browser-card-price {
         font-size: 10px;
+    }
+}
+
+/* Pagination Controls */
+.browser-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 30px;
+    padding: 20px 0;
+    flex-wrap: wrap;
+}
+
+.pagination-btn {
+    padding: 8px 16px;
+    border: 1px solid #e0e0e0;
+    background: #fff;
+    color: #333;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    min-width: 44px;
+    text-align: center;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background: #f5f5f5;
+    border-color: #ccc;
+    transform: translateY(-1px);
+}
+
+.pagination-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.pagination-btn.active {
+    background: #333;
+    color: #fff;
+    border-color: #333;
+    font-weight: 600;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f5f5f5;
+}
+
+.pagination-ellipsis {
+    padding: 8px 4px;
+    color: #999;
+    font-size: 14px;
+}
+
+@media (max-width: 480px) {
+    .browser-pagination {
+        gap: 4px;
+        margin-top: 20px;
+        padding: 15px 0;
+    }
+    
+    .pagination-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+        min-width: 36px;
     }
 }
 
@@ -3597,6 +3674,9 @@ body {
                 </div>
                 <div id="noResultsMessage" class="no-results" style="display: none;">
                     No items found. Try a different search term.
+                </div>
+                <div id="browserPagination" class="browser-pagination">
+                    <!-- Pagination controls will be populated here -->
                 </div>
             </div>
         </div>
