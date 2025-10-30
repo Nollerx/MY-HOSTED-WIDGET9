@@ -2653,9 +2653,10 @@ body {
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 24px;
     min-height: 200px;
-    margin-bottom: 80px;
+    margin-bottom: 0;
     padding: 0;
     isolation: isolate; /* Prevent overlap */
+    flex-grow: 0; /* Don't grow to fill space */
 }
 
 /* Improve spacing on larger screens */
@@ -2672,7 +2673,7 @@ body {
         grid-template-columns: 1fr 1fr !important;
         gap: 16px;
         padding: 0;
-        margin-bottom: 80px;
+        margin-bottom: 0;
     }
     
     .browser-clothing-card {
@@ -2687,7 +2688,7 @@ body {
         grid-template-columns: 1fr 1fr !important;
         gap: 14px;
         padding: 0;
-        margin-bottom: 80px;
+        margin-bottom: 0;
     }
     
     .browser-clothing-card {
@@ -2702,7 +2703,7 @@ body {
         grid-template-columns: 1fr 1fr !important;
         gap: 12px;
         padding: 0;
-        margin-bottom: 80px;
+        margin-bottom: 0;
     }
     
     .browser-clothing-card {
@@ -2919,9 +2920,9 @@ body {
     justify-content: center;
     align-items: center;
     gap: 8px;
-    margin-top: 30px;
     padding: 20px 0;
     flex-wrap: wrap;
+    width: 100%;
 }
 
 .pagination-btn {
@@ -3606,15 +3607,12 @@ body {
     content: none !important;
 }
 
-/* Sticky pagination: always visible and above cards */
+/* Pagination at bottom of container */
 .browser-pagination {
-    position: sticky;
-    bottom: 0;
-    background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, #fff 70%);
-    z-index: 10;
+    margin-top: auto; /* Push to bottom of flex container */
+    padding: 20px 0 0 0;
     border-top: 1px solid #eaeaea;
-    padding-top: 16px;
-    margin-top: 20px;
+    flex-shrink: 0; /* Don't shrink */
 }
     </style>
 </head>
