@@ -2600,16 +2600,17 @@ body {
 
 .browser-body {
     flex: 1;
-    padding: 20px;
+    padding: 20px 20px 100px 20px; /* Extra bottom padding for pagination */
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     -webkit-overflow-scrolling: touch;
+    position: relative;
 }
 
 @media (max-width: 480px) {
     .browser-body {
-        padding: 15px;
+        padding: 15px 15px 90px 15px; /* Extra bottom padding for pagination */
     }
 }
 
@@ -2656,7 +2657,6 @@ body {
     margin-bottom: 0;
     padding: 0;
     isolation: isolate; /* Prevent overlap */
-    flex-grow: 0; /* Don't grow to fill space */
 }
 
 /* Improve spacing on larger screens */
@@ -2914,15 +2914,24 @@ body {
     }
 }
 
-/* Pagination Controls */
+/* Pagination Controls - Always at bottom, always on top */
 .browser-pagination {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 8px;
-    padding: 20px 0;
+    padding: 16px 20px;
     flex-wrap: wrap;
     width: 100%;
+    position: sticky;
+    bottom: 0;
+    background: linear-gradient(to top, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.95) 80%, rgba(255,255,255,0.9) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 100;
+    border-top: 1px solid #e0e0e0;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
+    margin-top: 20px;
 }
 
 .pagination-btn {
@@ -3453,6 +3462,38 @@ body {
     color: #fff !important;
 }
 
+/* Pagination Theme Support */
+.theme-black .browser-pagination {
+    background: linear-gradient(to top, rgba(24,26,27,0.98) 0%, rgba(24,26,27,0.95) 80%, rgba(24,26,27,0.9) 100%) !important;
+    border-top: 1px solid #fff !important;
+}
+
+.theme-black .pagination-btn {
+    background: #23272f !important;
+    border-color: #fff !important;
+    color: #fff !important;
+}
+
+.theme-black .pagination-btn:hover:not(:disabled) {
+    background: #2d3239 !important;
+}
+
+.theme-black .pagination-btn.active {
+    background: #fff !important;
+    color: #23272f !important;
+    border-color: #fff !important;
+}
+
+.theme-black .pagination-btn:disabled {
+    background: #181a1b !important;
+    border-color: #444 !important;
+    color: #666 !important;
+}
+
+.theme-black .pagination-ellipsis {
+    color: #999 !important;
+}
+
 /* Wardrobe Modal Theme Support */
 .theme-black .wardrobe-modal {
     background: rgba(0,0,0,0.8) !important;
@@ -3607,13 +3648,6 @@ body {
     content: none !important;
 }
 
-/* Pagination at bottom of container */
-.browser-pagination {
-    margin-top: auto; /* Push to bottom of flex container */
-    padding: 20px 0 0 0;
-    border-top: 1px solid #eaeaea;
-    flex-shrink: 0; /* Don't shrink */
-}
     </style>
 </head>
 <body>
