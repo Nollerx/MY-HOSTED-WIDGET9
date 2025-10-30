@@ -1,3 +1,4 @@
+
 console.log("Virtual Try-On Widget script is running");
 
 // Make initializeWidget globally accessible
