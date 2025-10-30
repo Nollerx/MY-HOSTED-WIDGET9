@@ -2600,17 +2600,18 @@ body {
 
 .browser-body {
     flex: 1;
-    padding: 20px 20px 100px 20px; /* Extra bottom padding for pagination */
+    padding: 20px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     -webkit-overflow-scrolling: touch;
     position: relative;
+    min-height: 0; /* Allow flex child to shrink */
 }
 
 @media (max-width: 480px) {
     .browser-body {
-        padding: 15px 15px 90px 15px; /* Extra bottom padding for pagination */
+        padding: 15px;
     }
 }
 
@@ -2923,15 +2924,11 @@ body {
     padding: 16px 20px;
     flex-wrap: wrap;
     width: 100%;
-    position: sticky;
-    bottom: 0;
-    background: linear-gradient(to top, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.95) 80%, rgba(255,255,255,0.9) 100%);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    z-index: 100;
+    flex-shrink: 0; /* Don't shrink */
+    background: #ffffff;
     border-top: 1px solid #e0e0e0;
-    box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
-    margin-top: 20px;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+    z-index: 10;
 }
 
 .pagination-btn {
@@ -3464,8 +3461,13 @@ body {
 
 /* Pagination Theme Support */
 .theme-black .browser-pagination {
-    background: linear-gradient(to top, rgba(24,26,27,0.98) 0%, rgba(24,26,27,0.95) 80%, rgba(24,26,27,0.9) 100%) !important;
+    background: #23272f !important;
     border-top: 1px solid #fff !important;
+}
+
+.theme-cream .browser-pagination {
+    background: #fdf6ee !important;
+    border-top: 1px solid #e8e0d4 !important;
 }
 
 .theme-black .pagination-btn {
@@ -3762,9 +3764,9 @@ body {
                 <div id="noResultsMessage" class="no-results" style="display: none;">
                     No items found. Try a different search term.
                 </div>
-                <div id="browserPagination" class="browser-pagination">
-                    <!-- Pagination controls will be populated here -->
-                </div>
+            </div>
+            <div id="browserPagination" class="browser-pagination">
+                <!-- Pagination controls will be populated here -->
             </div>
         </div>
     </div>
