@@ -1,4 +1,3 @@
-
 console.log("Virtual Try-On Widget script is running");
 
 // Make initializeWidget globally accessible
@@ -7,6 +6,70 @@ window.initializeWidget = function() {
     detectDevice();
     tryonChatHistory = [];  // Initialize as array instead of undefined
     generalChatHistory = []; // Initialize as array instead of undefined
+    
+    // If store config not loaded yet (e.g., direct HTML load without loader), fetch it
+    if (!window.ELLO_STORE_CONFIG) {
+        const storeId = window.ELLO_STORE_ID || 'default_store';
+        console.log('🔄 Store config not found, fetching for store:', storeId);
+        
+        fetch(`https://rwmvgwnebnsqcyhhurti.supabase.co/rest/v1/stores?store_id=eq.${storeId}`, {
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                throw new Error('HTTP error! status: ' + response.status);
+            }
+        })
+        .then(data => {
+            console.log('🗄️ Raw store data from Supabase (direct fetch):', data);
+            if (data && data.length > 0) {
+                var storeConfig = data[0];
+                console.log('🗄️ Individual store config:', storeConfig);
+                console.log('🎨 minimized_color from DB:', storeConfig.minimized_color);
+                window.ELLO_STORE_CONFIG = {
+                    storeId: storeConfig.store_id,
+                    storeName: window.ELLO_STORE_NAME || 'default-name',
+                    clothingPopulationType: storeConfig.clothing_population_type || 'supabase',
+                    planName: storeConfig.plan_name,
+                    minimizedColor: storeConfig.minimized_color || null
+                };
+                console.log('✅ Store configuration loaded (direct fetch):', window.ELLO_STORE_CONFIG);
+                console.log('🎨 Minimized color in config:', window.ELLO_STORE_CONFIG.minimizedColor);
+                
+                // Now apply the color
+                applyMinimizedWidgetColor();
+            } else {
+                console.warn('⚠️ Store not found, using default config');
+                window.ELLO_STORE_CONFIG = {
+                    storeId: storeId,
+                    storeName: window.ELLO_STORE_NAME || 'default-name',
+                    clothingPopulationType: 'supabase',
+                    planName: 'STARTER',
+                    minimizedColor: null
+                };
+                applyMinimizedWidgetColor();
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error fetching store configuration:', error);
+            window.ELLO_STORE_CONFIG = {
+                storeId: storeId,
+                storeName: window.ELLO_STORE_NAME || 'default-name',
+                clothingPopulationType: 'supabase',
+                planName: 'STARTER',
+                minimizedColor: null
+            };
+            applyMinimizedWidgetColor();
+        });
+    } else {
+        console.log('✅ Store config already loaded');
+    }
     
     // Load clothing data from Shopify
     loadClothingData().then(() => {
@@ -17,6 +80,26 @@ window.initializeWidget = function() {
     
     // Apply theme
     applyWidgetTheme();
+    
+    // Apply minimized widget color
+    // Wait a bit for store config to be available if it's still loading
+    // Retry up to 3 times with increasing delays
+    let retryCount = 0;
+    const tryApplyColor = () => {
+        if (window.ELLO_STORE_CONFIG) {
+            console.log('🎨 Store config ready, applying color...');
+            applyMinimizedWidgetColor();
+        } else if (retryCount < 3) {
+            retryCount++;
+            const delay = retryCount * 500; // 500ms, 1000ms, 1500ms
+            console.log(`⏳ Store config not ready, retrying in ${delay}ms... (${retryCount}/3)`);
+            setTimeout(tryApplyColor, delay);
+        } else {
+            console.warn('⚠️ Store config not available after retries, using default color');
+            applyMinimizedWidgetColor(); // Still try (will use default)
+        }
+    };
+    tryApplyColor();
     
     const widget = document.getElementById('virtualTryonWidget');
     if (widget) {
@@ -48,8 +131,21 @@ window.initializeWidget = function() {
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', window.initializeWidget);
 } else {
-    // Don't auto-initialize here since the loader will call it
-    console.log('Document already loaded, waiting for manual initialization');
+    // If document already loaded and no store ID set, set default for testing
+    if (!window.ELLO_STORE_ID) {
+        window.ELLO_STORE_ID = 'default_store';
+        window.ELLO_STORE_NAME = 'default-name';
+        console.log('🧪 Using test store ID: default_store');
+    }
+    
+    // If loading directly (not via loader), initialize immediately
+    // Check if we're in a direct HTML load by looking for the widget container
+    setTimeout(() => {
+        if (document.getElementById('virtualTryonWidget') && !window.ELLO_STORE_CONFIG) {
+            console.log('📄 Direct HTML load detected, initializing widget...');
+            window.initializeWidget();
+        }
+    }, 100);
 }
 // Configuration
 const WEBHOOK_URL = 'https://ancesoftware.app.n8n.cloud/webhook/virtual-tryon-production';
@@ -59,6 +155,10 @@ let isMobile = false;
 let isTablet = false
 let isIOS = false;
 let isAndroid = false;
+
+// Mobile scroll lock variables
+let scrollLockPosition = 0;
+let scrollLockTouchHandler = null;
 
 // ============================================================================
 // CONFIGURATION & CONSTANTS
@@ -328,6 +428,133 @@ function hasClothingContext(product) {
 // Dynamic clothing data from Supabase
 let sampleClothing = [];
 
+// Generate comprehensive mock clothing data for testing
+function getMockClothingData() {
+    return [
+        {
+            id: 'mock-shirt-white',
+            name: 'Classic White Button-Down Shirt',
+            price: 49.99,
+            category: 'shirt',
+            color: 'white',
+            image_url: 'https://images.unsplash.com/photo-1603252109303-2751441dd157?w=300&h=400&fit=crop',
+            product_url: '#',
+            data_source: 'mock',
+            variants: [
+                { id: 'v1', title: 'Small', price: 49.99, available: true, size: 'S' },
+                { id: 'v2', title: 'Medium', price: 49.99, available: true, size: 'M' },
+                { id: 'v3', title: 'Large', price: 49.99, available: true, size: 'L' },
+                { id: 'v4', title: 'X-Large', price: 49.99, available: true, size: 'XL' }
+            ]
+        },
+        {
+            id: 'mock-dress-floral',
+            name: 'Summer Floral Midi Dress',
+            price: 79.99,
+            category: 'dress',
+            color: 'multicolor',
+            image_url: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=300&h=400&fit=crop',
+            product_url: '#',
+            data_source: 'mock',
+            variants: [
+                { id: 'v5', title: 'Small', price: 79.99, available: true, size: 'S' },
+                { id: 'v6', title: 'Medium', price: 79.99, available: true, size: 'M' },
+                { id: 'v7', title: 'Large', price: 79.99, available: true, size: 'L' }
+            ]
+        },
+        {
+            id: 'mock-jacket-denim',
+            name: 'Classic Blue Denim Jacket',
+            price: 89.99,
+            category: 'jacket',
+            color: 'blue',
+            image_url: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=300&h=400&fit=crop',
+            product_url: '#',
+            data_source: 'mock',
+            variants: [
+                { id: 'v8', title: 'Small', price: 89.99, available: true, size: 'S' },
+                { id: 'v9', title: 'Medium', price: 89.99, available: true, size: 'M' },
+                { id: 'v10', title: 'Large', price: 89.99, available: true, size: 'L' }
+            ]
+        },
+        {
+            id: 'mock-sweater-gray',
+            name: 'Cozy Gray Cable Knit Sweater',
+            price: 69.99,
+            category: 'sweater',
+            color: 'gray',
+            image_url: 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=300&h=400&fit=crop',
+            product_url: '#',
+            data_source: 'mock',
+            variants: [
+                { id: 'v11', title: 'Small', price: 69.99, available: true, size: 'S' },
+                { id: 'v12', title: 'Medium', price: 69.99, available: true, size: 'M' },
+                { id: 'v13', title: 'Large', price: 69.99, available: true, size: 'L' }
+            ]
+        },
+        {
+            id: 'mock-jeans-dark',
+            name: 'Dark Wash Slim Fit Jeans',
+            price: 59.99,
+            category: 'pants',
+            color: 'blue',
+            image_url: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=300&h=400&fit=crop',
+            product_url: '#',
+            data_source: 'mock',
+            variants: [
+                { id: 'v14', title: '28x30', price: 59.99, available: true, size: '28' },
+                { id: 'v15', title: '30x32', price: 59.99, available: true, size: '30' },
+                { id: 'v16', title: '32x32', price: 59.99, available: true, size: '32' }
+            ]
+        },
+        {
+            id: 'mock-blazer-navy',
+            name: 'Navy Blazer',
+            price: 129.99,
+            category: 'blazer',
+            color: 'navy',
+            image_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=400&fit=crop',
+            product_url: '#',
+            data_source: 'mock',
+            variants: [
+                { id: 'v17', title: 'Small', price: 129.99, available: true, size: 'S' },
+                { id: 'v18', title: 'Medium', price: 129.99, available: true, size: 'M' },
+                { id: 'v19', title: 'Large', price: 129.99, available: true, size: 'L' }
+            ]
+        },
+        {
+            id: 'mock-tshirt-black',
+            name: 'Black Cotton T-Shirt',
+            price: 29.99,
+            category: 't-shirt',
+            color: 'black',
+            image_url: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=400&fit=crop',
+            product_url: '#',
+            data_source: 'mock',
+            variants: [
+                { id: 'v20', title: 'Small', price: 29.99, available: true, size: 'S' },
+                { id: 'v21', title: 'Medium', price: 29.99, available: true, size: 'M' },
+                { id: 'v22', title: 'Large', price: 29.99, available: true, size: 'L' }
+            ]
+        },
+        {
+            id: 'mock-hoodie-red',
+            name: 'Red Zip-Up Hoodie',
+            price: 64.99,
+            category: 'hoodie',
+            color: 'red',
+            image_url: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=300&h=400&fit=crop',
+            product_url: '#',
+            data_source: 'mock',
+            variants: [
+                { id: 'v23', title: 'Small', price: 64.99, available: true, size: 'S' },
+                { id: 'v24', title: 'Medium', price: 64.99, available: true, size: 'M' },
+                { id: 'v25', title: 'Large', price: 64.99, available: true, size: 'L' }
+            ]
+        }
+    ];
+}
+
 // Load clothing data from active_clothing_items view
 // Load clothing data based on store configuration
 async function loadClothingData() {
@@ -364,6 +591,13 @@ async function loadClothingData() {
             await loadClothingFromShopify(storeConfig);
         }
         
+        // If no clothing items were loaded, use mock data for testing
+        if (!sampleClothing || sampleClothing.length === 0) {
+            console.log('⚠️ No clothing items found. Using mock data for testing...');
+            sampleClothing = getMockClothingData();
+            console.log('✅ Loaded', sampleClothing.length, 'mock clothing items for testing');
+        }
+        
         // Refresh UI if widget is open
         if (widgetOpen && currentMode === 'tryon') {
             await populateFeaturedAndQuickPicks();
@@ -377,45 +611,9 @@ async function loadClothingData() {
             showSuccessNotification('Connection Error', 'Unable to load products. Using demo data.', 5000);
         }
         
-        // Use comprehensive demo data
-        sampleClothing = [
-            {
-                id: 'demo-shirt-1',
-                name: 'Classic White Shirt',
-                price: 49.99,
-                category: 'shirt',
-                color: 'white',
-                image_url: 'https://via.placeholder.com/300x400/ffffff/333333?text=White+Shirt',
-                product_url: '#',
-                variants: [{ id: '1', title: 'Small', price: 49.99, available: true, size: 'S' },
-                          { id: '2', title: 'Medium', price: 49.99, available: true, size: 'M' },
-                          { id: '3', title: 'Large', price: 49.99, available: true, size: 'L' }]
-            },
-            {
-                id: 'demo-dress-1',
-                name: 'Summer Floral Dress',
-                price: 79.99,
-                category: 'dress',
-                color: 'multicolor',
-                image_url: 'https://via.placeholder.com/300x400/ffcccc/333333?text=Floral+Dress',
-                product_url: '#',
-                variants: [{ id: '4', title: 'Small', price: 79.99, available: true, size: 'S' },
-                          { id: '5', title: 'Medium', price: 79.99, available: true, size: 'M' }]
-            },
-            {
-                id: 'demo-jacket-1',
-                name: 'Denim Jacket',
-                price: 89.99,
-                category: 'jacket',
-                color: 'blue',
-                image_url: 'https://via.placeholder.com/300x400/4169e1/ffffff?text=Denim+Jacket',
-                product_url: '#',
-                variants: [{ id: '6', title: 'Medium', price: 89.99, available: true, size: 'M' },
-                          { id: '7', title: 'Large', price: 89.99, available: true, size: 'L' }]
-            }
-        ];
-        
-        console.log('Using demo data with', sampleClothing.length, 'items');
+        // Use mock data for testing
+        sampleClothing = getMockClothingData();
+        console.log('✅ Using mock data with', sampleClothing.length, 'items for testing');
     }
 }
 
@@ -598,8 +796,12 @@ async function loadClothingFromShopify(storeConfig) {
         allProducts = uniqueProducts;
     }
     
+    // If no products found, use mock data instead of throwing error
     if (allProducts.length === 0) {
-        throw new Error('No products found in Shopify store');
+        console.log('⚠️ No products found in Shopify store. Using mock data for testing...');
+        sampleClothing = getMockClothingData();
+        console.log('✅ Loaded', sampleClothing.length, 'mock clothing items for testing');
+        return; // Exit early with mock data
     }
 
     // Convert Shopify products to widget format
@@ -638,6 +840,13 @@ async function loadClothingFromShopify(storeConfig) {
     console.log(`✅ Loaded ${allProducts.length} total products from Shopify`);
     console.log(`✅ Converted ${convertedProducts.length} products`);
     console.log(`✅ Filtered to ${sampleClothing.length} clothing items`);
+    
+    // If no clothing items found, use mock data for testing
+    if (sampleClothing.length === 0) {
+        console.log('⚠️ No clothing items found in Shopify. Using mock data for testing...');
+        sampleClothing = getMockClothingData();
+        console.log('✅ Loaded', sampleClothing.length, 'mock clothing items for testing');
+    }
 }
 
 // Load clothing from Supabase
@@ -720,10 +929,21 @@ async function loadClothingFromSupabase(storeConfig) {
         console.log(`✅ Loaded ${allProducts.length} total products from Supabase`);
         console.log(`✅ Filtered to ${sampleClothing.length} clothing items`);
         console.log('✅ Final sampleClothing:', sampleClothing);
+        
+        // If no items found, use mock data for testing
+        if (sampleClothing.length === 0) {
+            console.log('⚠️ No clothing items found in Supabase. Using mock data for testing...');
+            sampleClothing = getMockClothingData();
+            console.log('✅ Loaded', sampleClothing.length, 'mock clothing items for testing');
+        }
 
     } catch (error) {
         console.error('❌ Error loading from Supabase:', error);
-        throw error;
+        // On error, also use mock data
+        console.log('⚠️ Error occurred. Using mock data for testing...');
+        sampleClothing = getMockClothingData();
+        console.log('✅ Loaded', sampleClothing.length, 'mock clothing items for testing');
+        // Don't throw - allow widget to continue with mock data
     }
 }
 
@@ -918,6 +1138,17 @@ function takePicture() {
         return;
     }
 
+    // Show best practices modal if not dismissed
+    if (checkShouldShowBestPractices()) {
+        pendingPhotoAction = proceedWithTakePicture;
+        showBestPracticesModal();
+        return;
+    }
+    
+    proceedWithTakePicture();
+}
+
+function proceedWithTakePicture() {
     try {
         const cameraInput = document.getElementById('cameraInput');
         
@@ -958,6 +1189,17 @@ function chooseFromGallery() {
         return;
     }
 
+    // Show best practices modal if not dismissed
+    if (checkShouldShowBestPractices()) {
+        pendingPhotoAction = proceedWithChooseFromGallery;
+        showBestPracticesModal();
+        return;
+    }
+    
+    proceedWithChooseFromGallery();
+}
+
+function proceedWithChooseFromGallery() {
     try {
         const photoInput = document.getElementById('photoInput');
         
@@ -991,14 +1233,267 @@ function chooseFromGallery() {
     }
 }
 
+// Best Practices Modal Functions
+function checkShouldShowBestPractices() {
+    try {
+        const dismissed = localStorage.getItem('vtow_best_practices_dismissed');
+        return dismissed !== 'true';
+    } catch (error) {
+        console.error('Error checking best practices preference:', error);
+        return true; // Default to showing if we can't check
+    }
+}
+
+function dismissBestPractices(dontShowAgain) {
+    try {
+        if (dontShowAgain) {
+            localStorage.setItem('vtow_best_practices_dismissed', 'true');
+        }
+    } catch (error) {
+        console.error('Error saving best practices preference:', error);
+    }
+}
+
+function showBestPracticesModal() {
+    const modal = document.getElementById('bestPracticesModal');
+    const backdrop = document.getElementById('bestPracticesBackdrop');
+    
+    if (modal && backdrop) {
+        modal.classList.add('active');
+        backdrop.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeBestPracticesModal(skipPendingAction = false) {
+    const modal = document.getElementById('bestPracticesModal');
+    const backdrop = document.getElementById('bestPracticesBackdrop');
+    
+    if (modal && backdrop) {
+        modal.classList.remove('active');
+        backdrop.classList.remove('active');
+        document.body.style.overflow = '';
+        
+        // Execute pending photo action if any (when closing via backdrop/close button, not Got It)
+        if (!skipPendingAction && pendingPhotoAction) {
+            const action = pendingPhotoAction;
+            pendingPhotoAction = null;
+            setTimeout(() => {
+                action();
+            }, 300);
+        }
+    }
+}
+
+let pendingPhotoAction = null; // Track pending photo action after modal close
+
+function handleBestPracticesDismiss() {
+    const dontShowAgain = document.getElementById('dontShowAgainCheckbox');
+    dismissBestPractices(dontShowAgain?.checked || false);
+    
+    // Clear pending action before closing (we'll execute it manually)
+    const action = pendingPhotoAction;
+    pendingPhotoAction = null;
+    
+    closeBestPracticesModal(true); // Skip pending action execution in close
+    
+    // Execute pending photo action if any
+    if (action) {
+        setTimeout(() => {
+            action();
+        }, 300);
+    }
+}
+
+function handleBestPracticesUpload() {
+    const dontShowAgain = document.getElementById('dontShowAgainCheckbox');
+    dismissBestPractices(dontShowAgain?.checked || false);
+    
+    // Close the modal
+    closeBestPracticesModal(true);
+    
+    // Execute pending photo action if it exists (from gallery, camera button, or photo change)
+    const action = pendingPhotoAction;
+    pendingPhotoAction = null;
+    
+    // Trigger photo upload after a short delay to allow modal to close
+    setTimeout(() => {
+        if (action) {
+            // Execute the pending action (proceedWithChooseFromGallery, proceedWithTakePicture, or handlePhotoUploadClick)
+            action();
+        } else {
+            // Fallback to default behavior - trigger file picker directly
+            const photoInput = document.getElementById('photoInput');
+            if (photoInput) {
+                photoInput.value = '';
+                
+                if (isIOS) {
+                    const newPhotoInput = document.createElement('input');
+                    newPhotoInput.type = 'file';
+                    newPhotoInput.accept = 'image/*';
+                    newPhotoInput.style.display = 'none';
+                    newPhotoInput.onchange = handlePhotoUpload;
+                    
+                    document.body.appendChild(newPhotoInput);
+                    
+                    setTimeout(() => {
+                        newPhotoInput.click();
+                        setTimeout(() => {
+                            if (newPhotoInput.parentNode) {
+                                newPhotoInput.parentNode.removeChild(newPhotoInput);
+                            }
+                        }, 1000);
+                    }, 100);
+                } else {
+                    setTimeout(() => {
+                        photoInput.click();
+                    }, 100);
+                }
+            }
+        }
+    }, 300);
+}
+
 function handlePhotoUploadClick() {
-    if (isMobile) {
+    // Show best practices modal if not dismissed
+    if (checkShouldShowBestPractices()) {
+        // Set up pending action to trigger file picker (works for both mobile and desktop)
+        pendingPhotoAction = () => {
+            const photoInput = document.getElementById('photoInput');
+            if (photoInput) {
+                // Reset the input value to allow selecting the same file again if needed
+                photoInput.value = '';
+                
+                if (isIOS) {
+                    // On iOS, create a new input element
+                    const newPhotoInput = document.createElement('input');
+                    newPhotoInput.type = 'file';
+                    newPhotoInput.accept = 'image/*';
+                    newPhotoInput.style.display = 'none';
+                    newPhotoInput.onchange = handlePhotoUpload;
+                    
+                    document.body.appendChild(newPhotoInput);
+                    
+                    setTimeout(() => {
+                        newPhotoInput.click();
+                        setTimeout(() => {
+                            if (newPhotoInput.parentNode) {
+                                newPhotoInput.parentNode.removeChild(newPhotoInput);
+                            }
+                        }, 1000);
+                    }, 100);
+                } else {
+                    // On Android/Desktop, use the existing input
+                    setTimeout(() => {
+                        photoInput.click();
+                    }, 100);
+                }
+            }
+        };
+        showBestPracticesModal();
         return;
-    } else {
+    }
+    
+    // If modal was dismissed, proceed normally
+    if (isMobile) {
+        // On mobile, trigger file picker directly
         const photoInput = document.getElementById('photoInput');
         if (photoInput) {
+            photoInput.value = '';
+            if (isIOS) {
+                const newPhotoInput = document.createElement('input');
+                newPhotoInput.type = 'file';
+                newPhotoInput.accept = 'image/*';
+                newPhotoInput.style.display = 'none';
+                newPhotoInput.onchange = handlePhotoUpload;
+                
+                document.body.appendChild(newPhotoInput);
+                
+                setTimeout(() => {
+                    newPhotoInput.click();
+                    setTimeout(() => {
+                        if (newPhotoInput.parentNode) {
+                            newPhotoInput.parentNode.removeChild(newPhotoInput);
+                        }
+                    }, 1000);
+                }, 100);
+            } else {
+                setTimeout(() => {
+                    photoInput.click();
+                }, 100);
+            }
+        }
+    } else {
+        // On desktop, trigger file input click
+        const photoInput = document.getElementById('photoInput');
+        if (photoInput) {
+            photoInput.value = '';
             photoInput.click();
         }
+    }
+}
+
+/**
+ * Lock body scroll on mobile to prevent background scrolling when widget is open
+ */
+function lockBodyScroll() {
+    if (!isMobile) return;
+    
+    // Store current scroll position
+    scrollLockPosition = window.pageYOffset || document.documentElement.scrollTop;
+    
+    // Set body to fixed position at current scroll
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollLockPosition}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+    document.body.style.overflow = 'hidden';
+    
+    // Prevent touch scrolling on body (but allow it in widget)
+    scrollLockTouchHandler = function(e) {
+        // Allow scrolling within the widget container
+        const widget = document.getElementById('virtualTryonWidget');
+        const widgetContainer = document.getElementById('virtual-tryon-widget-container');
+        const target = e.target;
+        
+        // Check if touch is inside widget or its container
+        if (widget && (widget.contains(target) || widget === target)) {
+            return; // Allow touch events in widget
+        }
+        if (widgetContainer && (widgetContainer.contains(target) || widgetContainer === target)) {
+            return; // Allow touch events in container
+        }
+        
+        // Prevent all other touch scrolling
+        e.preventDefault();
+    };
+    
+    document.addEventListener('touchmove', scrollLockTouchHandler, { passive: false });
+}
+
+/**
+ * Unlock body scroll on mobile and restore scroll position
+ */
+function unlockBodyScroll() {
+    if (!isMobile) return;
+    
+    // Remove fixed positioning
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    document.body.style.overflow = '';
+    
+    // Restore scroll position
+    window.scrollTo(0, scrollLockPosition);
+    scrollLockPosition = 0;
+    
+    // Remove touch handler
+    if (scrollLockTouchHandler) {
+        document.removeEventListener('touchmove', scrollLockTouchHandler);
+        scrollLockTouchHandler = null;
     }
 }
 
@@ -1008,9 +1503,8 @@ function openWidget() {
     widget.classList.remove('widget-minimized');
     widgetOpen = true;
     
-    if (isMobile) {
-        document.body.style.overflow = 'hidden';
-    }
+    // Lock body scroll on mobile
+    lockBodyScroll();
     
     loadChatHistory();
     if (currentMode === 'tryon') {
@@ -1022,6 +1516,10 @@ setTimeout(() => {
         selectedClothing = currentProduct.id;
         const featuredContainer = document.getElementById('featuredItem');
         featuredContainer.classList.add('selected');
+        
+        // Don't show preview - auto-selected product is visible in featured section
+        updateSelectedClothingPreview(null);
+        
         updateTryOnButton();
         console.log('🎯 Auto-selected current product:', currentProduct.name);
     }
@@ -1053,8 +1551,18 @@ function closeWidget() {
     widgetOpen = false;
     currentMode = 'tryon';
     
-    // Reset body overflow
-    document.body.style.overflow = '';
+    // Apply minimized widget color (check if gradient was already set)
+    const savedGradient = widget.getAttribute('data-minimized-gradient');
+    if (savedGradient) {
+        widget.style.background = savedGradient;
+        console.log('✅ Restored saved gradient on minimize:', savedGradient);
+    } else {
+        // Apply color if not already set
+        applyMinimizedWidgetColor();
+    }
+    
+    // Unlock body scroll on mobile
+    unlockBodyScroll();
     
     // Reset mode buttons
     document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
@@ -1234,6 +1742,59 @@ function selectFeaturedClothing() {
     // Highlight featured item
     const featuredContainer = document.getElementById('featuredItem');
     featuredContainer.classList.add('selected');
+    
+    // Don't show preview - item is already visible in featured section
+    updateSelectedClothingPreview(null);
+    
+    updateTryOnButton();
+}
+
+function updateSelectedClothingPreview(clothingId) {
+    const preview = document.getElementById('selectedClothingPreview');
+    const previewImage = document.getElementById('selectedClothingImage');
+    
+    if (!clothingId) {
+        // Hide preview if no clothing selected
+        if (preview) {
+            preview.style.display = 'none';
+        }
+        return;
+    }
+    
+    // Find clothing in sampleClothing array
+    const clothing = sampleClothing.find(item => item.id === clothingId);
+    
+    if (!clothing) {
+        console.warn('Clothing not found for preview:', clothingId);
+        if (preview) {
+            preview.style.display = 'none';
+        }
+        return;
+    }
+    
+    // Update preview with clothing data
+    if (previewImage && clothing.image_url) {
+        previewImage.src = clothing.image_url;
+        previewImage.alt = clothing.name || 'Selected clothing';
+    }
+    
+    // Show preview
+    if (preview) {
+        preview.style.display = 'block';
+    }
+}
+
+function clearSelectedClothing() {
+    selectedClothing = null;
+    
+    // Clear preview
+    updateSelectedClothingPreview(null);
+    
+    // Clear all visual selections
+    document.querySelectorAll('.featured-item, .quick-pick-item, .browser-clothing-card').forEach(item => {
+        item.classList.remove('selected');
+    });
+    
     updateTryOnButton();
 }
 
@@ -1252,6 +1813,9 @@ function selectClothing(clothingId) {
     // Highlight selected item
     event.target.closest('.quick-pick-item').classList.add('selected');
     
+    // Don't show preview - item is already visible in quick picks
+    updateSelectedClothingPreview(null);
+    
     updateTryOnButton();
 }
 
@@ -1267,6 +1831,9 @@ function resetSelection() {
     document.querySelectorAll('.featured-item, .quick-pick-item').forEach(item => {
         item.classList.remove('selected');
     });
+    
+    // Clear preview
+    updateSelectedClothingPreview(null);
     
     // Reset photo preview
     const preview = document.getElementById('photoPreview');
@@ -1508,14 +2075,14 @@ function handleGeneralMessage(message) {
     addBotMessage(randomResponse);
 }
 
-function handlePhotoUpload(event) {
+async function handlePhotoUpload(event) {
     const file = event.target.files[0];
     if (!file) {
         console.log('No file selected');
         return;
     }
     
-    // Enhanced file validation
+    // Basic file validation first
     const validationResult = validateImageFile(file);
     if (!validationResult.isValid) {
         showSuccessNotification('Invalid File', validationResult.error, 4000, true);
@@ -1530,12 +2097,53 @@ function handlePhotoUpload(event) {
     
     const reader = new FileReader();
     
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         try {
-            userPhoto = e.target.result;
+            const imageDataUrl = e.target.result;
+            
+            // Show analyzing overlay on mobile
+            const analysisOverlay = document.getElementById('photoAnalysisOverlay');
+            if (isMobile && analysisOverlay) {
+                analysisOverlay.style.display = 'flex';
+            }
+            
+            // Show analyzing state
+            const uploadText = uploadArea?.querySelector('.upload-text:not(#changePhotoText)');
+            if (uploadText) {
+                const originalText = uploadText.textContent;
+                uploadText.textContent = 'Analyzing image quality...';
+            }
+            
+            // Enhanced quality validation
+            const qualityResult = await validateImageQuality(imageDataUrl);
+            
+            if (!qualityResult.isValid) {
+                // Hide overlay
+                if (isMobile && analysisOverlay) {
+                    analysisOverlay.style.display = 'none';
+                }
+                // Restore original text
+                if (uploadText) {
+                    uploadText.textContent = uploadArea.querySelector('.upload-icon') ? 'Tap to upload full body image' : 'Click to upload full body image';
+                }
+                showSuccessNotification('Image Quality Issue', qualityResult.error, 5000, true);
+                if (uploadArea) {
+                    uploadArea.classList.remove('uploading');
+                }
+                return;
+            }
+            
+            // Show warnings if any (non-blocking)
+            if (qualityResult.warnings && qualityResult.warnings.length > 0) {
+                const warningMessage = qualityResult.warnings.join(' ');
+                showSuccessNotification('Quality Tips', warningMessage, 4000, false);
+            }
+            
+            // Image passed all checks
+            userPhoto = imageDataUrl;
             userPhotoFileId = 'photo_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             
-            updatePhotoPreview(e.target.result);
+            updatePhotoPreview(imageDataUrl);
             updateTryOnButton();
             
             // Haptic feedback on mobile
@@ -1549,6 +2157,11 @@ function handlePhotoUpload(event) {
             console.error('Error processing uploaded image:', error);
             showSuccessNotification('Upload Error', 'Failed to process the image. Please try again.', 4000);
         } finally {
+            // Hide overlay
+            const analysisOverlay = document.getElementById('photoAnalysisOverlay');
+            if (isMobile && analysisOverlay) {
+                analysisOverlay.style.display = 'none';
+            }
             if (uploadArea) {
                 uploadArea.classList.remove('uploading');
             }
@@ -1564,6 +2177,481 @@ function handlePhotoUpload(event) {
     };
     
     reader.readAsDataURL(file);
+}
+
+// Image Quality Analysis Functions
+async function analyzeImageQuality(imageSrc) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        // Only set crossOrigin for external URLs, not data URLs
+        if (!imageSrc.startsWith('data:')) {
+            img.crossOrigin = 'anonymous';
+        }
+        
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            
+            ctx.drawImage(img, 0, 0);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const pixels = imageData.data;
+            
+            // Calculate aspect ratio
+            const aspectRatio = canvas.width / canvas.height;
+            const isPortrait = canvas.height > canvas.width;
+            const widthHeightRatio = canvas.width / canvas.height;
+            
+            // Calculate brightness and contrast
+            let sumLuminance = 0;
+            let sumSquaredDiff = 0;
+            const pixelCount = pixels.length / 4;
+            
+            for (let i = 0; i < pixels.length; i += 4) {
+                const r = pixels[i];
+                const g = pixels[i + 1];
+                const b = pixels[i + 2];
+                // Calculate luminance using relative luminance formula
+                const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                sumLuminance += luminance;
+            }
+            
+            const averageBrightness = sumLuminance / pixelCount;
+            
+            // Calculate contrast (standard deviation of luminance)
+            for (let i = 0; i < pixels.length; i += 4) {
+                const r = pixels[i];
+                const g = pixels[i + 1];
+                const b = pixels[i + 2];
+                const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                const diff = luminance - averageBrightness;
+                sumSquaredDiff += diff * diff;
+            }
+            
+            const contrast = Math.sqrt(sumSquaredDiff / pixelCount);
+            
+            resolve({
+                width: canvas.width,
+                height: canvas.height,
+                aspectRatio: aspectRatio,
+                isPortrait: isPortrait,
+                widthHeightRatio: widthHeightRatio,
+                brightness: averageBrightness,
+                contrast: contrast
+            });
+        };
+        
+        img.onerror = function() {
+            resolve(null);
+        };
+        
+        img.src = imageSrc;
+    });
+}
+
+// Optional face detection using Face-API.js
+let faceApiLoaded = false;
+let faceApiLoading = false;
+
+async function loadFaceApi() {
+    if (faceApiLoaded || faceApiLoading) return faceApiLoaded;
+    
+    faceApiLoading = true;
+    try {
+        // Check if Face-API.js is available
+        if (typeof faceapi === 'undefined') {
+            // Try to load from CDN
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js';
+                script.onload = () => {
+                    setTimeout(async () => {
+                        try {
+                            await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model');
+                            faceApiLoaded = true;
+                            faceApiLoading = false;
+                            resolve();
+                        } catch (e) {
+                            console.log('Face-API model loading failed:', e);
+                            faceApiLoading = false;
+                            resolve(); // Don't reject, just continue without face detection
+                        }
+                    }, 1000);
+                };
+                script.onerror = () => {
+                    console.log('Face-API.js failed to load');
+                    faceApiLoading = false;
+                    resolve(); // Don't reject, graceful fallback
+                };
+                document.head.appendChild(script);
+            });
+        } else {
+            faceApiLoaded = true;
+            faceApiLoading = false;
+        }
+    } catch (error) {
+        console.log('Face-API initialization failed:', error);
+        faceApiLoading = false;
+    }
+    
+    return faceApiLoaded;
+}
+
+async function detectFaceInImage(imageSrc) {
+    if (!faceApiLoaded) {
+        await loadFaceApi();
+    }
+    
+    if (!faceApiLoaded || typeof faceapi === 'undefined') {
+        return { detected: false, warning: null }; // Silent fail - don't show warning if not available
+    }
+    
+    try {
+        // Handle data URLs and regular URLs
+        let img;
+        if (imageSrc.startsWith('data:')) {
+            // For data URLs, create an image element
+            img = new Image();
+            img.src = imageSrc;
+            await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = reject;
+            });
+        } else {
+            img = await faceapi.fetchImage(imageSrc);
+        }
+        
+        const detections = await faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions());
+        
+        return {
+            detected: detections.length > 0,
+            count: detections.length,
+            warning: detections.length === 0 ? 'No face detected. For best results, use a photo with your face clearly visible.' : null
+        };
+    } catch (error) {
+        console.log('Face detection error:', error);
+        return { detected: false, warning: null }; // Silent fail
+    }
+}
+
+// Body detection using TensorFlow.js MoveNet
+let tfLoaded = false;
+let tfLoading = false;
+let movenetModel = null;
+
+async function loadTensorFlow() {
+    // Check if TensorFlow.js is already loaded (possibly by Face-API.js)
+    if (typeof tf !== 'undefined') {
+        tfLoaded = true;
+        return true;
+    }
+    
+    if (tfLoaded || tfLoading) return tfLoaded;
+    
+    tfLoading = true;
+    try {
+        // Load TensorFlow.js from CDN only if not already present
+        await new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js';
+            script.onload = () => {
+                // Double-check it loaded
+                if (typeof tf !== 'undefined') {
+                    tfLoaded = true;
+                } else {
+                    tfLoaded = false;
+                }
+                tfLoading = false;
+                resolve();
+            };
+            script.onerror = () => {
+                console.log('TensorFlow.js failed to load');
+                tfLoading = false;
+                tfLoaded = false;
+                resolve(); // Don't reject, graceful fallback
+            };
+            document.head.appendChild(script);
+        });
+    } catch (error) {
+        console.log('TensorFlow.js initialization failed:', error);
+        tfLoading = false;
+        tfLoaded = false;
+    }
+    
+    return tfLoaded;
+}
+
+async function loadMoveNetModel() {
+    if (!tfLoaded) {
+        await loadTensorFlow();
+    }
+    
+    if (!tfLoaded || typeof tf === 'undefined') {
+        return null;
+    }
+    
+    if (movenetModel) {
+        return movenetModel;
+    }
+    
+    try {
+        // Load MoveNet using TensorFlow Hub or CDN
+        // Try TensorFlow Hub first (more reliable)
+        const modelUrl = 'https://tfhub.dev/google/tfjs-model/movenet/singlepose/lightning/4';
+        movenetModel = await tf.loadGraphModel(modelUrl, { fromTFHub: true });
+        return movenetModel;
+    } catch (error) {
+        console.log('MoveNet model loading from TFHub failed:', error);
+        // Try alternative: use pose-detection library from unpkg
+        try {
+            const alternativeUrl = 'https://cdn.jsdelivr.net/npm/@tensorflow-models/movenet@2.1.0/dist/movenet_singlepose_lightning_4/model.json';
+            movenetModel = await tf.loadGraphModel(alternativeUrl);
+            return movenetModel;
+        } catch (altError) {
+            console.log('Alternative MoveNet loading also failed:', altError);
+            // Final fallback: try loading from unpkg
+            try {
+                const fallbackUrl = 'https://unpkg.com/@tensorflow-models/movenet@2.1.0/dist/movenet_singlepose_lightning_4/model.json';
+                movenetModel = await tf.loadGraphModel(fallbackUrl);
+                return movenetModel;
+            } catch (finalError) {
+                console.log('All MoveNet loading attempts failed:', finalError);
+                return null;
+            }
+        }
+    }
+}
+
+async function detectBodyInImage(imageSrc) {
+    // Check if TensorFlow is available (may be loaded by Face-API.js)
+    if (typeof tf === 'undefined') {
+        await loadTensorFlow();
+    } else {
+        tfLoaded = true; // Mark as loaded if it's already available
+    }
+    
+    if (typeof tf === 'undefined') {
+        // Silent fail - don't block upload if TensorFlow isn't available
+        return { detected: false, state: null, warning: null, message: null };
+    }
+    
+    try {
+        const model = await loadMoveNetModel();
+        if (!model) {
+            // Silent fail - don't block upload if model can't load
+            return { detected: false, state: null, warning: null, message: null };
+        }
+        
+        // Load and preprocess image
+        const img = new Image();
+        // Only set crossOrigin for external URLs, not data URLs
+        if (!imageSrc.startsWith('data:')) {
+            img.crossOrigin = 'anonymous';
+        }
+        img.src = imageSrc;
+        
+        await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+        });
+        
+        // Resize image for MoveNet (model expects 192x192)
+        const tensor = tf.browser.fromPixels(img);
+        const resized = tf.image.resizeBilinear(tensor, [192, 192]);
+        const expanded = resized.expandDims(0);
+        
+        // MoveNet expects uint8 [0, 255] range, not normalized
+        // Cast to int32 as the model signature requires
+        const int32Tensor = expanded.cast('int32');
+        
+        // Run inference - MoveNet expects input shape [1, 192, 192, 3] with int32 dtype
+        // Use execute() instead of executeAsync() as suggested by the warning
+        const predictions = model.execute(int32Tensor);
+        
+        // MoveNet output shape can vary - get the data
+        // Get the raw array data
+        let keypointsArray;
+        try {
+            keypointsArray = await predictions.array();
+        } catch (e) {
+            console.log('Error getting array from predictions:', e);
+            return { detected: false, warning: null };
+        }
+        
+        // Handle different output shapes - flatten to get the keypoints
+        let keypoints = null;
+        
+        try {
+            // MoveNet can return different shapes depending on the model version
+            // Common formats: [1, 17, 3], [1, 1, 17, 3], or [17, 3]
+            if (!Array.isArray(keypointsArray)) {
+                console.log('Output is not an array, type:', typeof keypointsArray);
+                return { detected: false, warning: null };
+            }
+            
+            // Deep flatten to find the actual keypoints array [17, 3]
+            let current = keypointsArray;
+            let depth = 0;
+            const maxDepth = 5;
+            
+            while (depth < maxDepth && Array.isArray(current)) {
+                if (current.length === 17 && Array.isArray(current[0]) && current[0].length >= 3) {
+                    // Found it! This is [17, 3]
+                    keypoints = current;
+                    break;
+                } else if (current.length === 1 && Array.isArray(current[0])) {
+                    // Unwrap one level
+                    current = current[0];
+                    depth++;
+                } else if (current.length > 0 && Array.isArray(current[0]) && Array.isArray(current[0][0])) {
+                    // Multi-level nested, try first element
+                    current = current[0];
+                    depth++;
+                } else {
+                    // Unknown structure, try to use as-is if it has 17 elements
+                    if (current.length >= 17) {
+                        keypoints = current;
+                    }
+                    break;
+                }
+            }
+            
+            if (!keypoints) {
+                // Fallback: try common access patterns
+                if (keypointsArray[0]?.[0]?.length === 3 && keypointsArray[0][0].length >= 17) {
+                    keypoints = keypointsArray[0][0];
+                } else if (keypointsArray[0]?.length >= 17) {
+                    keypoints = keypointsArray[0];
+                } else if (keypointsArray.length >= 17) {
+                    keypoints = keypointsArray;
+                }
+            }
+            
+            if (!keypoints) {
+                console.log('Failed to extract keypoints from MoveNet output');
+                return { detected: false, warning: null };
+            }
+        } catch (e) {
+            console.log('Error extracting keypoints structure:', e);
+            return { detected: false, warning: null };
+        }
+        
+        // Clean up tensors
+        tensor.dispose();
+        resized.dispose();
+        expanded.dispose();
+        int32Tensor.dispose();
+        predictions.dispose();
+        
+        // MoveNet returns 17 keypoints with [y, x, confidence] format
+        // Important keypoints for body detection: shoulders, hips
+        // Keypoint indices: 0=nose, 5=left shoulder, 6=right shoulder, 11=left hip, 12=right hip
+        const keypointConfidences = [];
+        
+        // Ensure we have valid keypoints array BEFORE trying to access it
+        if (!keypoints || !Array.isArray(keypoints) || keypoints.length < 17) {
+            // Silent fail - don't block upload if we can't analyze
+            return { detected: false, state: null, warning: null, message: null };
+        }
+        
+        // Extract confidences - handle different possible structures
+        for (let i = 0; i < 17; i++) {
+            try {
+                if (keypoints[i] && Array.isArray(keypoints[i]) && keypoints[i].length >= 3) {
+                    // Standard format: [y, x, confidence]
+                    const confidence = keypoints[i][2];
+                    keypointConfidences.push(confidence || 0);
+                } else if (typeof keypoints[i] === 'object' && keypoints[i] !== null) {
+                    // Maybe it's an object format
+                    const confidence = keypoints[i].score || keypoints[i].confidence || 0;
+                    keypointConfidences.push(confidence);
+                } else {
+                    // Unknown format, use 0
+                    keypointConfidences.push(0);
+                }
+            } catch (e) {
+                console.log(`Error extracting keypoint ${i}:`, e, keypoints[i]);
+                keypointConfidences.push(0);
+            }
+        }
+        
+        // Configuration: Confidence thresholds
+        const SHOULDER_CONFIDENCE_THRESHOLD = 0.5;
+        const HIP_CONFIDENCE_THRESHOLD = 0.5;
+        const REJECT_AVG_CONFIDENCE_THRESHOLD = 0.2;
+        
+        // Extract key body keypoints
+        const leftShoulder = keypointConfidences[5];  // index 5
+        const rightShoulder = keypointConfidences[6]; // index 6
+        const leftHip = keypointConfidences[11];      // index 11
+        const rightHip = keypointConfidences[12];     // index 12
+        
+        // Calculate average confidence of all keypoints - if too low, likely no body
+        const avgConfidence = keypointConfidences.reduce((sum, conf) => sum + conf, 0) / keypointConfidences.length;
+        
+        // Check for body structure detection
+        const hasBothShoulders = leftShoulder > SHOULDER_CONFIDENCE_THRESHOLD && rightShoulder > SHOULDER_CONFIDENCE_THRESHOLD;
+        const hasBothHips = leftHip > HIP_CONFIDENCE_THRESHOLD && rightHip > HIP_CONFIDENCE_THRESHOLD;
+        const hasAnyShoulder = leftShoulder > SHOULDER_CONFIDENCE_THRESHOLD || rightShoulder > SHOULDER_CONFIDENCE_THRESHOLD;
+        const hasAnyHip = leftHip > HIP_CONFIDENCE_THRESHOLD || rightHip > HIP_CONFIDENCE_THRESHOLD;
+        
+        // Three-tier detection system:
+        // 1. REJECT: No body detected (no shoulders AND no hips, or very low average confidence)
+        // 2. WARNING: Partial body (shoulders OR hips, but not both)
+        // 3. SUCCESS: Full body (both shoulders AND hips detected)
+        
+        let state, message, detected;
+        
+        if ((!hasAnyShoulder && !hasAnyHip) || avgConfidence < REJECT_AVG_CONFIDENCE_THRESHOLD) {
+            // REJECT: No body detected
+            state = 'reject';
+            detected = false;
+            message = 'No body detected in photo. Please upload a full-body photo with you standing clearly visible.';
+        } else if (hasBothShoulders && hasBothHips) {
+            // SUCCESS: Full body detected
+            state = 'success';
+            detected = true;
+            message = null; // No message needed for success
+        } else {
+            // WARNING: Partial body (shoulders OR hips, but not both)
+            state = 'warning';
+            detected = true; // Still allow upload, just warn
+            if (hasAnyShoulder && !hasAnyHip) {
+                message = 'Only upper body detected. For best try-on results, include your full body (shoulders to hips) in the photo.';
+            } else if (hasAnyHip && !hasAnyShoulder) {
+                message = 'Only lower body detected. For best try-on results, include your full body (shoulders to hips) in the photo.';
+            } else {
+                message = 'Partial body detected. For best try-on results, use a full-body photo with both your shoulders and hips clearly visible.';
+            }
+        }
+        
+        const detectedKeypoints = [leftShoulder, rightShoulder, leftHip, rightHip].filter(conf => conf > 0.5).length;
+        
+        console.log('Body detection details:', {
+            leftShoulder,
+            rightShoulder,
+            leftHip,
+            rightHip,
+            avgConfidence,
+            hasBothShoulders,
+            hasBothHips,
+            state,
+            detected
+        });
+        
+        return {
+            detected: detected,
+            state: state,
+            keypointCount: detectedKeypoints,
+            message: message,
+            warning: state === 'warning' ? message : (state === 'reject' ? message : null)
+        };
+    } catch (error) {
+        console.log('Body detection error:', error);
+        // On error, don't block - gracefully fail (silent fail)
+        return { detected: false, state: null, warning: null, message: null };
+    }
 }
 
 function validateImageFile(file) {
@@ -1589,6 +2677,84 @@ function validateImageFile(file) {
     }
     
     return { isValid: true };
+}
+
+// Enhanced validation with quality checks
+async function validateImageQuality(imageSrc) {
+    const warnings = [];
+    const errors = [];
+    
+    // Analyze image quality
+    const analysis = await analyzeImageQuality(imageSrc);
+    
+    if (!analysis) {
+        return {
+            isValid: false,
+            error: 'Failed to analyze image. Please try a different image.',
+            warnings: []
+        };
+    }
+    
+    // Check minimum resolution - relaxed to allow more images
+    const MIN_RESOLUTION = 300;
+    if (analysis.width < MIN_RESOLUTION || analysis.height < MIN_RESOLUTION) {
+        warnings.push(`Image resolution is on the lower side. For best results, use an image at least ${MIN_RESOLUTION}x${MIN_RESOLUTION} pixels.`);
+    }
+    
+    // Check aspect ratio (portrait orientation) - warning only, not blocking
+    if (!analysis.isPortrait) {
+        warnings.push('Portrait orientation is recommended for best try-on results. Landscape photos may not work as well.');
+    } else {
+        // Check width/height ratio (should be between 0.5 and 0.8)
+        if (analysis.widthHeightRatio < 0.5 || analysis.widthHeightRatio > 0.8) {
+            warnings.push('Image aspect ratio is not ideal. For best results, use a full-body portrait photo.');
+        }
+    }
+    
+    // Check brightness
+    if (analysis.brightness < 0.15) {
+        errors.push('Image is too dark. Please use a photo with better lighting.');
+    } else if (analysis.brightness > 0.9) {
+        errors.push('Image is too bright. Please use a photo with more balanced lighting.');
+    } else if (analysis.brightness < 0.25 || analysis.brightness > 0.8) {
+        warnings.push('Lighting could be improved for better results.');
+    }
+    
+    // Check contrast
+    if (analysis.contrast < 0.05) {
+        errors.push('Image has insufficient contrast. Please use a clearer, more defined photo.');
+    } else if (analysis.contrast < 0.1) {
+        warnings.push('Image contrast is low. Better contrast will improve try-on results.');
+    }
+    
+    // Optional face detection (non-blocking, warning only)
+    const faceResult = await detectFaceInImage(imageSrc);
+    if (faceResult.warning && !faceResult.detected) {
+        warnings.push(faceResult.warning);
+    }
+    
+    // Body detection with three-tier system: reject, warning, or success
+    const bodyResult = await detectBodyInImage(imageSrc);
+    
+    // Handle body detection states (only act if state is not null - null means silent fail)
+    if (bodyResult && bodyResult.state) {
+        if (bodyResult.state === 'reject') {
+            // REJECT: Block upload - no body detected
+            errors.push(bodyResult.message || 'No body detected in photo. Please upload a full-body photo with you standing clearly visible.');
+        } else if (bodyResult.state === 'warning') {
+            // WARNING: Show notification but allow upload - partial body detected
+            warnings.push(bodyResult.message || 'Partial body detected. For best try-on results, use a full-body photo with both your shoulders and hips clearly visible.');
+        }
+        // SUCCESS: No action needed - full body detected, allow silently
+    }
+    // If state is null, silent fail - don't block or warn (graceful degradation)
+    
+    return {
+        isValid: errors.length === 0,
+        error: errors.length > 0 ? errors.join(' ') : null,
+        warnings: warnings,
+        analysis: analysis
+    };
 }
 
 function updatePhotoPreview(imageData) {
@@ -1686,6 +2852,9 @@ function selectClothingFromBrowser(clothingId) {
     });
     
     event.target.closest('.browser-clothing-card').classList.add('selected');
+    
+    // Update preview
+    updateSelectedClothingPreview(clothingId);
     
     closeClothingBrowser();
     populateFeaturedAndQuickPicks();
@@ -2841,6 +4010,111 @@ async function applyWidgetTheme() {
     widget.classList.add(`theme-${theme}`);
 }
 
+/**
+ * Apply minimized widget color from store configuration
+ * Reads the minimized_color from window.ELLO_STORE_CONFIG and applies it
+ * Falls back to default gradient if color is not set
+ */
+function applyMinimizedWidgetColor() {
+    const widget = document.getElementById('virtualTryonWidget');
+    if (!widget) {
+        console.warn('⚠️ Widget element not found for color application');
+        return;
+    }
+    
+    // Get color from store configuration
+    const storeConfig = window.ELLO_STORE_CONFIG;
+    let minimizedColor = null;
+    
+    console.log('🎨 Applying minimized color. Store config:', storeConfig);
+    
+    if (storeConfig && storeConfig.minimizedColor) {
+        minimizedColor = storeConfig.minimizedColor.trim();
+        console.log('🎨 Found minimized color:', minimizedColor);
+        
+        // Validate hex color format
+        const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+        if (!hexColorRegex.test(minimizedColor)) {
+            console.warn('❌ Invalid hex color format:', minimizedColor);
+            minimizedColor = null;
+        } else {
+            console.log('✅ Valid hex color format');
+        }
+    } else {
+        console.log('ℹ️ No minimized color found in store config. storeConfig:', storeConfig);
+        if (!storeConfig) {
+            console.log('⚠️ Store config not loaded yet. Color will use default.');
+        }
+    }
+    
+    // Apply color if valid, otherwise use default gradient
+    if (minimizedColor) {
+        // Convert hex to RGB for better gradient effect
+        let hex = minimizedColor.replace('#', '');
+        
+        // Handle 3-character hex codes (e.g., #FFF -> #FFFFFF)
+        if (hex.length === 3) {
+            hex = hex.split('').map(char => char + char).join('');
+        }
+        
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        
+        console.log('🎨 Converting color to RGB:', { r, g, b });
+        
+        // Create a subtle gradient from the base color
+        const lighterR = Math.min(255, r + 30);
+        const lighterG = Math.min(255, g + 30);
+        const lighterB = Math.min(255, b + 30);
+        const darkerR = Math.max(0, r - 20);
+        const darkerG = Math.max(0, g - 20);
+        const darkerB = Math.max(0, b - 20);
+        
+        const gradient = `linear-gradient(135deg, rgb(${darkerR}, ${darkerG}, ${darkerB}) 0%, rgb(${r}, ${g}, ${b}) 50%, rgb(${lighterR}, ${lighterG}, ${lighterB}) 100%)`;
+        
+        // Store the gradient in a data attribute for when widget is minimized
+        widget.setAttribute('data-minimized-gradient', gradient);
+        
+        // Apply as inline style (will override CSS when minimized)
+        widget.style.setProperty('--minimized-bg', minimizedColor);
+        
+        // Always apply to minimized state (CSS handles visibility)
+        const isMinimized = widget.classList.contains('widget-minimized');
+        if (isMinimized) {
+            widget.style.background = gradient;
+            console.log('✅ Applied gradient to minimized widget:', gradient);
+        } else {
+            console.log('ℹ️ Widget not minimized yet, gradient will apply when minimized');
+        }
+        
+        // Determine text color based on brightness for contrast
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        const textColor = brightness > 128 ? '#333' : '#fff';
+        const textShadow = brightness > 128 
+            ? '0 2px 4px rgba(255,255,255,0.8)' 
+            : '0 2px 4px rgba(0,0,0,0.8)';
+        
+        // Update text color and shadow via CSS variables
+        widget.style.setProperty('--minimized-text-color', textColor);
+        widget.style.setProperty('--minimized-text-shadow', textShadow);
+        
+        console.log('✅ Applied minimized widget color:', minimizedColor, '| Text color:', textColor);
+    } else {
+        // Remove inline styles to use default CSS gradient
+        widget.style.removeProperty('--minimized-bg');
+        widget.style.removeProperty('--minimized-text-color');
+        widget.style.removeProperty('--minimized-text-shadow');
+        widget.removeAttribute('data-minimized-gradient');
+        
+        const isMinimized = widget.classList.contains('widget-minimized');
+        if (isMinimized) {
+            widget.style.background = '';
+        }
+        console.log('✅ Using default minimized widget gradient');
+    }
+}
+
 // ============================================================================
 // WARDROBE FUNCTIONALITY
 // ============================================================================
@@ -3174,6 +4448,9 @@ function selectWardrobeItem(tryOnId) {
         quickPickItem.classList.add('selected');
     }
     
+    // Don't show preview - wardrobe item selection updates visible quick picks/featured
+    updateSelectedClothingPreview(null);
+    
     // Update try-on button
     updateTryOnButton();
     
@@ -3326,4 +4603,3 @@ async function addWardrobeItemToCart(tryOnId) {
         alert('❌ Network error: ' + error.message);
     }
 }
-
