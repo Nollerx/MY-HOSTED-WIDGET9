@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- CSP: Allow embedding from anywhere (widget is injected via JS, not iframe, but this ensures compatibility) -->
+    <meta http-equiv="Content-Security-Policy" content="frame-ancestors *;">
     <title>Virtual Try-On Widget</title>
     <!-- Google Fonts - Poppins -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -222,14 +224,29 @@
     to { transform: scaleX(0); }
 }
 
-       /* Reset and base styles */
-* {
-    margin: 0;
-    padding: 0;
+       /* Reset and base styles - SCOPED to widget container only */
+#virtual-tryon-widget-container * {
     box-sizing: border-box;
 }
 
-body {
+/* Only reset margins/padding on specific elements that need it, not all elements */
+#virtual-tryon-widget-container > * {
+    margin: 0;
+    padding: 0;
+}
+
+/* Preserve default spacing for headings and text elements */
+#virtual-tryon-widget-container h1,
+#virtual-tryon-widget-container h2,
+#virtual-tryon-widget-container h3,
+#virtual-tryon-widget-container h4,
+#virtual-tryon-widget-container h5,
+#virtual-tryon-widget-container h6,
+#virtual-tryon-widget-container p {
+    margin: 0;
+}
+
+#virtual-tryon-widget-container {
     font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     line-height: 1.4;
 }
@@ -337,18 +354,20 @@ body {
 }
 
 .widget-minimized::after {
-    content: '⚡\ATRY';
+    content: 'VIRTUAL\ATRY ON';
     display: block;
-    color: #333;
-    font-size: 10px;
-    font-weight: 700;
+    color: var(--minimized-text-color, #333);
+    font-size: 11px;
+    font-weight: 800;
     text-align: center;
-    line-height: 1.1;
-    letter-spacing: 1px;
+    line-height: 1.2;
+    letter-spacing: 0.8px;
     white-space: pre-line;
     text-transform: uppercase;
-    text-shadow: 0 2px 4px rgba(255,255,255,0.8);
+    text-shadow: var(--minimized-text-shadow, 0 2px 4px rgba(255,255,255,0.8));
 }
+
+
 
 /* Header - Clean White */
 .widget-header {
@@ -814,9 +833,11 @@ body {
 }
 
 .quick-pick-item.selected {
-    border-color: #333;
+    border: 3px solid #333 !important;
     background: #f0f0f0;
     transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2), 0 0 0 3px rgba(51, 51, 51, 0.1) !important;
+    position: relative;
 }
 
 .quick-pick-image {
@@ -955,9 +976,9 @@ body {
 .photo-instruction {
     text-align: center;
     margin-bottom: 12px;
-    color: #666;
-    font-size: 13px;
-    font-weight: 500;
+    color: #333;
+    font-size: 14px;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -965,8 +986,9 @@ body {
 /* Mobile-specific instruction adjustments */
 @media (max-width: 768px) {
     .photo-instruction {
-        font-size: 12px;
+        font-size: 13px;
         margin-bottom: 10px;
+        font-weight: 700;
     }
 }
 
@@ -1026,7 +1048,7 @@ body {
 /* Mobile-specific photo upload container adjustments */
 @media (max-width: 768px) {
     .photo-upload.has-photo {
-        min-height: 120px;
+        min-height: 80px;
         padding: 10px;
     }
 }
@@ -1074,11 +1096,85 @@ body {
 /* Mobile-specific photo preview adjustments */
 @media (max-width: 768px) {
     .photo-preview {
-        max-height: 100px;
+        max-height: 80px;
         max-width: 100%;
         object-fit: contain;
         width: auto;
         height: auto;
+    }
+}
+
+/* Photo Analysis Loading Bar */
+.photo-analysis-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 12px 16px;
+    margin: 12px 0;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    width: 100%;
+}
+
+.analysis-spinner-small {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.analysis-spinner-small span {
+    width: 6px;
+    height: 6px;
+    background: #667eea;
+    border-radius: 50%;
+    animation: dotBounce 1.4s infinite ease-in-out;
+}
+
+.analysis-spinner-small span:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.analysis-spinner-small span:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+.analysis-spinner-small span:nth-child(3) {
+    animation-delay: 0;
+}
+
+@keyframes dotBounce {
+    0%, 80%, 100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+}
+
+.analysis-text-bar {
+    font-size: 14px;
+    font-weight: 500;
+    color: #4a5568;
+}
+
+@media (max-width: 480px) {
+    .photo-analysis-bar {
+        padding: 10px 12px;
+        margin: 10px 0;
+    }
+    
+    .analysis-spinner-small span {
+        width: 5px;
+        height: 5px;
+    }
+    
+    .analysis-text-bar {
+        font-size: 13px;
     }
 }
 
@@ -1105,6 +1201,264 @@ body {
     .camera-controls {
         display: none !important;
     }
+}
+
+/* Selected Clothing Preview Styles */
+.photo-section-content {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    align-items: stretch;
+}
+
+@media (max-width: 768px) {
+    .photo-section-content {
+        flex-direction: row;
+        gap: 12px;
+        align-items: stretch;
+    }
+}
+
+.selected-clothing-preview {
+    background: #ffffff;
+    border: 2px solid #333;
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100px;
+    height: 100%;
+}
+
+.selected-clothing-content {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+@media (max-width: 768px) {
+    .selected-clothing-content {
+        gap: 10px;
+    }
+}
+
+.selected-clothing-image-container {
+    position: relative;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.selected-clothing-image {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+@media (max-width: 768px) {
+    .selected-clothing-image {
+        width: 80px;
+        height: 80px;
+    }
+}
+
+@media (max-width: 480px) {
+    .selected-clothing-image {
+        width: 70px;
+        height: 70px;
+    }
+}
+
+.selected-clothing-remove {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #333;
+    color: white;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.selected-clothing-remove:hover {
+    background: #dc2626;
+    transform: scale(1.1);
+}
+
+.selected-clothing-remove:active {
+    transform: scale(0.95);
+}
+
+@media (max-width: 768px) {
+    .selected-clothing-remove {
+        width: 22px;
+        height: 22px;
+        font-size: 16px;
+    }
+}
+
+.selected-clothing-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+}
+
+.selected-clothing-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    line-height: 1.3;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+    .selected-clothing-name {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .selected-clothing-name {
+        font-size: 11px;
+    }
+}
+
+.selected-clothing-label {
+    font-size: 11px;
+    color: #666;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+@media (max-width: 768px) {
+    .selected-clothing-label {
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .selected-clothing-label {
+        font-size: 9px;
+    }
+}
+
+/* Desktop: Side-by-side layout when preview is visible */
+@media (min-width: 769px) {
+    .photo-section-content {
+        display: flex;
+        flex-direction: row;
+        gap: 16px;
+        align-items: flex-start;
+    }
+    
+    .photo-upload {
+        flex: 1;
+    }
+    
+    .selected-clothing-preview {
+        flex-shrink: 0;
+        width: auto;
+    }
+    
+    .selected-clothing-content {
+        width: auto;
+    }
+}
+
+/* Mobile: Side-by-side layout - preview and photo upload next to each other */
+@media (max-width: 768px) {
+    .photo-section-content {
+        flex-direction: row;
+        width: 100%;
+        gap: 10px;
+        align-items: stretch;
+    }
+    
+    .selected-clothing-preview {
+        flex-shrink: 0;
+        width: auto;
+        margin-bottom: 0;
+        min-height: 80px;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .photo-upload {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .photo-upload.has-photo {
+        min-height: 80px;
+    }
+}
+
+/* Theme Support for Selected Clothing Preview */
+.theme-black .selected-clothing-preview {
+    background: #23272f;
+    border-color: #fff;
+    color: #fff;
+}
+
+.theme-black .selected-clothing-name {
+    color: #fff;
+}
+
+.theme-black .selected-clothing-label {
+    color: #ccc;
+}
+
+.theme-black .selected-clothing-image {
+    border-color: #fff;
+}
+
+.theme-black .selected-clothing-remove {
+    background: #fff;
+    color: #333;
+    border-color: #333;
+}
+
+.theme-black .selected-clothing-remove:hover {
+    background: #dc2626;
+    color: #fff;
+}
+
+.theme-cream .selected-clothing-preview {
+    background: #fdf6ee;
+    border-color: #bfa77a;
+}
+
+.theme-cream .selected-clothing-name {
+    color: #3a2c1a;
+}
+
+.theme-cream .selected-clothing-label {
+    color: #8b7355;
 }
 
 .camera-option-btn {
@@ -1385,6 +1739,7 @@ body {
     padding: 20px;
     background: #ffffff;
     border-top: 1px solid #e0e0e0;
+    position: relative;
 }
 
 /* Ensure result section is visible when loading */
@@ -1682,6 +2037,9 @@ body {
 /* Buy Now Button */
 .buy-now-container {
     margin-top: 16px;
+    position: relative;
+    display: inline-block;
+    width: 100%;
 }
 
 .buy-now-btn {
@@ -1693,7 +2051,7 @@ body {
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1701,32 +2059,44 @@ body {
     text-transform: uppercase;
     letter-spacing: 1px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    position: relative;
+    min-width: fit-content;
+    width: auto;
 }
 
 .buy-now-btn:hover {
     background: linear-gradient(135deg, #222 0%, #444 100%);
-    transform: translateY(-1px);
     box-shadow: 0 6px 20px rgba(0,0,0,0.2);
 }
 
 .buy-now-btn.loading {
     opacity: 0.7;
     cursor: not-allowed;
+    transform: none !important;
+    position: relative;
+    left: 0 !important;
+    right: 0 !important;
 }
 
 .buy-now-btn .loading-spinner {
-    display: none;
     width: 16px;
     height: 16px;
-    border: 2px solid #ccc;
-    border-top: 2px solid #fff;
+    border: 2px solid transparent;
+    border-top: 2px solid transparent;
     border-radius: 50%;
-    animation: spin 1s linear infinite;
     margin-right: 8px;
+    flex-shrink: 0;
+    opacity: 0;
+    visibility: hidden;
+    transition: none;
 }
 
 .buy-now-btn.loading .loading-spinner {
-    display: block;
+    border: 2px solid #ccc;
+    border-top: 2px solid #fff;
+    animation: spin 1s linear infinite;
+    opacity: 1;
+    visibility: visible;
 }
 
 .buy-now-btn.loading .btn-text {
@@ -2181,8 +2551,8 @@ body {
 
 .wardrobe-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
     min-height: 200px;
 }
 
@@ -2195,7 +2565,7 @@ body {
     }
     
     .wardrobe-item {
-        min-height: 240px;
+        min-height: 300px;
     }
 }
 
@@ -2208,7 +2578,7 @@ body {
     }
     
     .wardrobe-item {
-        min-height: 220px;
+        min-height: 260px;
     }
 }
 
@@ -2221,7 +2591,7 @@ body {
     }
     
     .wardrobe-item {
-        min-height: 200px;
+        min-height: 240px;
     }
 }
 
@@ -2238,7 +2608,7 @@ body {
     flex-direction: column;
     justify-content: space-between;
     width: 100%;
-    min-height: 280px;
+    min-height: 400px;
     position: relative;
     overflow: hidden;
 }
@@ -2260,7 +2630,7 @@ body {
     .wardrobe-item {
         padding: 10px 6px;
         border-radius: 6px;
-        min-height: 180px;
+        min-height: 280px;
         max-width: none;
         width: 100%;
     }
@@ -2327,39 +2697,51 @@ body {
 
 @media (max-width: 480px) {
     .wardrobe-item img {
-        height: 90px;
-        margin-bottom: 5px;
-        border-radius: 4px;
+        height: 100%;
+        margin-bottom: 0;
+        border-radius: 0;
+        object-fit: cover;
+        width: 100%;
+        min-height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
     }
 }
 
 @media (max-width: 320px) {
     .wardrobe-item img {
-        height: 80px;
-        margin-bottom: 4px;
-        border-radius: 3px;
+        height: 100%;
+        margin-bottom: 0;
+        border-radius: 0;
+        object-fit: cover;
+        width: 100%;
+        min-height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
     }
 }
 
 /* Desktop fix for wardrobe images */
 @media (min-width: 769px) {
-    .wardrobe-item img {
-        height: auto;
-        min-height: 100px;
-        max-height: 150px;
-        object-fit: contain;
-        object-position: center;
-        background-color: #f0f0f0;
-        border-radius: 4px;
-        margin-bottom: 8px;
-        width: 100%;
-    }
-    
     .wardrobe-item {
-        min-height: auto;
+        min-height: 400px;
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
+    }
+    
+    .wardrobe-item img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        border-radius: 12px;
     }
 }
 
@@ -2539,6 +2921,603 @@ body {
     overflow: hidden;
     box-shadow: 0 25px 80px rgba(0,0,0,0.2);
     border: 1px solid #e0e0e0;
+}
+
+/* Best Practices Modal */
+.best-practices-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 20000;
+    backdrop-filter: blur(8px);
+    animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+    }
+    to {
+        opacity: 1;
+        backdrop-filter: blur(8px);
+    }
+}
+
+.best-practices-modal.active {
+    display: flex;
+}
+
+.best-practices-content {
+    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+    width: 90vw;
+    max-width: 680px;
+    max-height: 95vh;
+    height: fit-content;
+    border-radius: 24px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 32px 96px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    animation: modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    transform-origin: center;
+}
+
+@keyframes modalSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.best-practices-header {
+    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+    color: #1a1a1a;
+    padding: 24px 32px 20px 32px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    position: relative;
+}
+
+.best-practices-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0;
+    text-transform: none;
+    letter-spacing: -0.3px;
+    color: #1a1a1a;
+    text-align: center;
+    flex: 1;
+}
+
+.best-practices-close {
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    color: #333;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+}
+
+.best-practices-close:hover {
+    background: rgba(0, 0, 0, 0.1);
+    transform: translateY(-50%) rotate(90deg) scale(1.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.best-practices-close:active {
+    transform: translateY(-50%) rotate(90deg) scale(0.95);
+}
+
+/* Disclaimer Note */
+.best-practices-note {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.best-practices-note p {
+    font-size: 13px;
+    color: #4a5568;
+    margin: 0;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.best-practices-body {
+    flex: 1;
+    padding: 32px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+}
+
+.best-practices-tip {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    padding: 24px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 16px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.best-practices-tip::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+    border-radius: 0 2px 2px 0;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.best-practices-tip:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+    border-color: rgba(102, 126, 234, 0.2);
+}
+
+.best-practices-tip:hover::before {
+    opacity: 1;
+}
+
+.best-practices-tip:last-child {
+    margin-bottom: 0;
+}
+
+.tip-icon {
+    font-size: 36px;
+    flex-shrink: 0;
+    line-height: 1;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border-radius: 16px;
+    border: 1px solid rgba(102, 126, 234, 0.15);
+    position: relative;
+}
+
+.tip-icon::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.best-practices-tip:hover .tip-icon::after {
+    opacity: 1;
+}
+
+.tip-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tip-content h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0;
+    color: #1a1a1a;
+    letter-spacing: -0.2px;
+    line-height: 1.3;
+}
+
+.tip-content p {
+    font-size: 15px;
+    margin: 0;
+    color: #4a5568;
+    line-height: 1.6;
+    font-weight: 400;
+}
+
+.best-practices-footer {
+    padding: 24px 32px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+}
+
+.dont-show-again-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #4a5568;
+    user-select: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.dont-show-again-label:hover {
+    color: #2d3748;
+}
+
+.dont-show-again-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #667eea;
+    border-radius: 4px;
+    border: 2px solid #cbd5e0;
+    transition: all 0.2s ease;
+}
+
+.dont-show-again-label input[type="checkbox"]:checked {
+    border-color: #667eea;
+}
+
+.best-practices-got-it {
+    padding: 14px 32px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.best-practices-got-it::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.best-practices-got-it:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+}
+
+.best-practices-got-it:hover::before {
+    left: 100%;
+}
+
+.best-practices-got-it:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Photo Comparison Styles */
+.photo-comparison-container {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.comparison-image-wrapper {
+    flex: 1;
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    background: #f0f0f0;
+}
+
+.comparison-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover;
+    aspect-ratio: 3 / 4;
+}
+
+.comparison-badge {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+}
+
+.comparison-badge.good {
+    background: #10b981;
+}
+
+.comparison-badge.bad {
+    background: #ef4444;
+}
+
+.comparison-badge svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Tips Comparison Styles */
+.tips-comparison-container {
+    display: flex;
+    gap: 24px;
+    margin-top: 8px;
+}
+
+.tips-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.tip-bullet {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #2d3748;
+    font-weight: 500;
+}
+
+.tip-bullet svg {
+    flex-shrink: 0;
+}
+
+.tip-bullet span {
+    line-height: 1.4;
+}
+
+.tip-bullet.good {
+    color: #1a202c;
+}
+
+.tip-bullet.bad {
+    color: #4a5568;
+}
+
+/* Upload Photo Button */
+.upload-photo-btn {
+    padding: 14px 32px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.upload-photo-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.upload-photo-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+}
+
+.upload-photo-btn:hover::before {
+    left: 100%;
+}
+
+.upload-photo-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+@media (max-width: 768px) {
+    .best-practices-content {
+        width: 100vw;
+        height: 100vh;
+        max-width: 100vw;
+        max-height: 100vh;
+        border-radius: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .best-practices-header {
+        padding: 16px 20px 12px 20px;
+        flex-shrink: 0;
+    }
+
+    .best-practices-title {
+        font-size: 18px;
+    }
+    
+    .best-practices-note {
+        margin-top: 16px;
+        padding-top: 12px;
+    }
+    
+    .best-practices-note p {
+        font-size: 11px;
+    }
+
+    .best-practices-close {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+        right: 16px;
+    }
+
+    .best-practices-body {
+        padding: 16px 20px;
+        overflow-y: auto;
+        flex: 1;
+        min-height: 0;
+    }
+
+    .best-practices-tip {
+        padding: 20px;
+        gap: 16px;
+        border-radius: 14px;
+    }
+
+    .tip-icon {
+        font-size: 32px;
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+    }
+
+    .tip-content h3 {
+        font-size: 17px;
+    }
+
+    .tip-content p {
+        font-size: 14px;
+    }
+
+    .best-practices-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding: 16px 20px;
+        flex-shrink: 0;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .best-practices-got-it {
+        width: 100%;
+        padding: 14px 24px;
+    }
+
+    .dont-show-again-label {
+        justify-content: flex-start;
+    }
+
+    /* Mobile Photo Comparison - Side by side */
+    .photo-comparison-container {
+        flex-direction: row;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .comparison-image-wrapper {
+        flex: 1;
+    }
+
+    .comparison-image {
+        aspect-ratio: 3 / 4;
+        width: 100%;
+    }
+
+    .comparison-badge {
+        width: 28px;
+        height: 28px;
+        bottom: 8px;
+        right: 8px;
+    }
+
+    .comparison-badge svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    /* Mobile Tips Comparison - Side by side */
+    .tips-comparison-container {
+        flex-direction: row;
+        gap: 12px;
+        margin-top: 4px;
+    }
+
+    .tips-column {
+        flex: 1;
+    }
+
+    .tip-bullet {
+        font-size: 11px;
+        gap: 6px;
+        margin-bottom: 8px;
+    }
+
+    .tip-bullet:last-child {
+        margin-bottom: 0;
+    }
+
+    .tip-bullet svg {
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+    }
+
+    .tip-bullet span {
+        font-size: 11px;
+        line-height: 1.3;
+    }
+
+    /* Mobile Upload Button */
+    .upload-photo-btn {
+        width: 100%;
+        padding: 14px 24px;
+        font-size: 15px;
+    }
+
+    .best-practices-footer {
+        gap: 12px;
+    }
 }
 
 .browser-header {
@@ -3355,7 +4334,9 @@ body {
 .theme-black .browser-clothing-card.selected {
     background: #181a1b !important;
     border-color: #fff !important;
+    border-width: 3px !important;
 }
+
 .theme-black .browse-all-btn {
     background: #23272f !important;
     border: 1px solid #fff !important;
@@ -3702,11 +4683,25 @@ body {
                 <div class="photo-section">
                     <div class="photo-instruction">Upload full body image to get started</div>
                     
-                    <div class="photo-upload" onclick="handlePhotoUploadClick()">
-                        <div class="upload-icon">🧍</div>
-                        <div class="upload-text">Tap to upload full body image</div>
-                        <img id="photoPreview" class="photo-preview" style="display: none;">
-                        <div id="changePhotoText" class="upload-text" style="display: none; margin-top: 8px; font-size: 12px; color: #6366f1;">Tap to change photo</div>
+                    <!-- Photo Upload and Preview Container (flex for side-by-side on desktop) -->
+                    <div class="photo-section-content">
+                        <!-- Photo Upload Area -->
+                        <div class="photo-upload" onclick="handlePhotoUploadClick()">
+                            <div class="upload-icon">🧍</div>
+                            <div class="upload-text">Tap to upload full body image</div>
+                            <img id="photoPreview" class="photo-preview" style="display: none;">
+                            <div id="changePhotoText" class="upload-text" style="display: none; margin-top: 8px; font-size: 12px; color: #6366f1;">Tap to change photo</div>
+                        </div>
+                        
+                        <!-- Selected Clothing Preview (shown when item is selected) -->
+                        <div id="selectedClothingPreview" class="selected-clothing-preview" style="display: none;">
+                            <div class="selected-clothing-content">
+                                <div class="selected-clothing-image-container">
+                                    <img id="selectedClothingImage" class="selected-clothing-image" src="" alt="Selected clothing">
+                                    <button class="selected-clothing-remove" onclick="clearSelectedClothing()" aria-label="Remove selected clothing">×</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
                     <!-- Mobile Camera Controls -->
@@ -3724,6 +4719,16 @@ body {
                     <!-- File inputs -->
                     <input type="file" id="photoInput" class="hidden-input" accept="image/*" onchange="handlePhotoUpload(event)">
                     <input type="file" id="cameraInput" class="hidden-input" accept="image/*" capture="environment" onchange="handlePhotoUpload(event)">
+                    
+                    <!-- Mobile Analysis Loading Bar -->
+                    <div id="photoAnalysisOverlay" class="photo-analysis-bar" style="display: none;">
+                        <div class="analysis-spinner-small">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                        <span class="analysis-text-bar">Analyzing image quality...</span>
+                    </div>
                 </div>
                 
                 <!-- Action Buttons -->
@@ -3779,6 +4784,157 @@ body {
         </div>
     </div>
 
+    <!-- Best Practices Modal -->
+    <div id="bestPracticesBackdrop" class="modal-backdrop" onclick="closeBestPracticesModal()"></div>
+    <div id="bestPracticesModal" class="best-practices-modal">
+        <div class="best-practices-content">
+            <div class="best-practices-header">
+                <h2 class="best-practices-title">How to get the best results</h2>
+                <button class="best-practices-close" onclick="closeBestPracticesModal()" aria-label="Close tips modal">&times;</button>
+            </div>
+            <div class="best-practices-body">
+                <!-- Image Comparison Section -->
+                <!-- Good example: Woman in jeans with plain background (full body, well-lit, standing straight) -->
+                <!-- Bad example: Man in oversized puffy jacket (outdoor, bulky clothing, not full body) -->
+                <div class="photo-comparison-container">
+                    <div class="comparison-image-wrapper">
+                        <img src="IMG_3109.png" alt="Good example: Full body portrait with plain background" class="comparison-image" id="goodExampleImage">
+                        <div class="comparison-badge good">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M16.6667 5L7.50004 14.1667L3.33337 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="comparison-image-wrapper">
+                        <img src="IMG_3111.png" alt="Bad example: Oversized clothing with busy background" class="comparison-image" id="badExampleImage">
+                        <div class="comparison-badge bad">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M5 5L15 15M15 5L5 15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tips Comparison Section -->
+                <div class="tips-comparison-container">
+                    <div class="tips-column tips-column-good">
+                        <div class="tip-bullet good">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="9" cy="9" r="8" fill="#10b981"/>
+                                <path d="M5 9L8 12L13 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Full body</span>
+                        </div>
+                        <div class="tip-bullet good">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="9" cy="9" r="8" fill="#10b981"/>
+                                <path d="M5 9L8 12L13 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Good lighting</span>
+                        </div>
+                        <div class="tip-bullet good">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="9" cy="9" r="8" fill="#10b981"/>
+                                <path d="M5 9L8 12L13 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Just you</span>
+                        </div>
+                        <div class="tip-bullet good">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="9" cy="9" r="8" fill="#10b981"/>
+                                <path d="M5 9L8 12L13 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>No hands in pockets</span>
+                        </div>
+                        <div class="tip-bullet good">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="9" cy="9" r="8" fill="#10b981"/>
+                                <path d="M5 9L8 12L13 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Plain background</span>
+                        </div>
+                        <div class="tip-bullet good">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="9" cy="9" r="8" fill="#10b981"/>
+                                <path d="M5 9L8 12L13 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Minimal clothing</span>
+                        </div>
+                        <div class="tip-bullet good">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="9" cy="9" r="8" fill="#10b981"/>
+                                <path d="M5 9L8 12L13 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>High resolution</span>
+                        </div>
+                    </div>
+                    <div class="tips-column tips-column-bad">
+                        <div class="tip-bullet bad">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="9" cy="9" r="8" fill="#ef4444"/>
+                                <path d="M5 5L13 13M13 5L5 13" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Sitting down</span>
+                        </div>
+                        <div class="tip-bullet bad">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="9" cy="9" r="8" fill="#ef4444"/>
+                                <path d="M5 5L13 13M13 5L5 13" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Facing backwards</span>
+                        </div>
+                        <div class="tip-bullet bad">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="9" cy="9" r="8" fill="#ef4444"/>
+                                <path d="M5 5L13 13M13 5L5 13" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Baggy clothes</span>
+                        </div>
+                        <div class="tip-bullet bad">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="9" cy="9" r="8" fill="#ef4444"/>
+                                <path d="M5 5L13 13M13 5L5 13" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Harsh shadows</span>
+                        </div>
+                        <div class="tip-bullet bad">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="9" cy="9" r="8" fill="#ef4444"/>
+                                <path d="M5 5L13 13M13 5L5 13" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Busy background</span>
+                        </div>
+                        <div class="tip-bullet bad">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="9" cy="9" r="8" fill="#ef4444"/>
+                                <path d="M5 5L13 13M13 5L5 13" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Low resolution</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Disclaimer Note -->
+                <div class="best-practices-note">
+                    <p>Note: Body shapes and personal features may not be accurately represented in virtual try-on results.</p>
+                </div>
+            </div>
+            <div class="best-practices-footer">
+                <label class="dont-show-again-label">
+                    <input type="checkbox" id="dontShowAgainCheckbox">
+                    <span>Don't show this again</span>
+                </label>
+                <button class="upload-photo-btn" onclick="handleBestPracticesUpload()">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 8px;">
+                        <path d="M10 2V13M10 13L6 9M10 13L14 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 18H18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    Upload photo
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Wardrobe Modal -->
     <div id="wardrobeModal" class="wardrobe-modal">
         <div class="wardrobe-content">
@@ -3814,7 +4970,9 @@ body {
 </div>
 
     <!-- Remove the inline <script> tag and replace it with an external script reference -->
-    <script src="https://nollerx.github.io/MY-HOSTED-WIDGET9/widget-main.js"></script>
+    <!-- Using local file for testing - change to hosted URL for production -->
+    <script src="widget-main.js"></script>
+    <!-- Production: <script src="https://nollerx.github.io/MY-HOSTED-WIDGET-DEV/widget-main.js"></script> -->
     
     <script>
     // Override the startTryOn function to fix spinner order and add branding
